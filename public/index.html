@@ -1009,50 +1009,115 @@
             }
         }
 
+        // Simulador de contadores locales (sin backend)
+        let localCounters = {};
+
+        function getLocalCounter(type, department) {
+            const year = new Date().getFullYear();
+            const key = `${type}_${department}_${year}`;
+            
+            if (!localCounters[key]) {
+                localCounters[key] = 0;
+            }
+            
+            localCounters[key]++;
+            return localCounters[key];
+        }
+
+        function generateDocumentNumber(type, department) {
+            const counter = getLocalCounter(type, department);
+            const year = new Date().getFullYear();
+            const typePrefix = documentTypeMapping[type]?.prefix || 'Documento No.';
+            
+            // Formato: Tipo No.SINTEL-DEPT-###-YYYY
+            return `${typePrefix}SINTEL-${department}-${counter.toString().padStart(3, '0')}-${year}`;
+        }
+
         async function generateDocument() {
             try {
                 setButtonLoading('generateBtn', true);
                 
-                const documentData = {
-                    type: document.getElementById('documentType').value,
-                    department: document.getElementById('department').value
+                const documentType = document.getElementById('documentType').value;
+                const department = document.getElementById('department').value;
+                
+                console.log('Generando documento:', documentType, department);
+                
+                // Simular delay de procesamiento
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const documentNumber = generateDocumentNumber(documentType, department);
+                
+                currentDocument = {
+                    type: documentType,
+                    department: department,
+                    number: documentNumber,
+                    date: new Date().toLocaleString('es-ES')
                 };
 
-                const result = await apiCall('/generate-document', {
-                    method: 'POST',
-                    body: JSON.stringify(documentData)
-                });
+                console.log('Documento generado:', currentDocument);
 
-                if (result.success) {
-                    currentDocument = {
-                        ...documentData,
-                        number: result.documentNumber,
-                        date: new Date().toLocaleString('es-ES')
-                    };
+                // Mostrar vista previa
+                document.getElementById('generatedNumber').textContent = documentNumber;
+                document.getElementById('documentContent').innerHTML = createDocumentHTML(currentDocument);
+                document.getElementById('documentPreview').style.display = 'block';
 
-                    // Mostrar vista previa
-                    document.getElementById('generatedNumber').textContent = result.documentNumber;
-                    document.getElementById('documentContent').innerHTML = createDocumentHTML(currentDocument);
-                    document.getElementById('documentPreview').style.display = 'block';
+                // 🆕 DESCARGA AUTOMÁTICA DEL DOCUMENTO WORD
+                autoDownloadWord();
 
-                    // 🆕 DESCARGA AUTOMÁTICA DEL DOCUMENTO WORD
-                    autoDownloadWord();
+                showAlert(`Documento ${documentNumber} generado y descargado automáticamente`, 'success');
+                updateStatus('🟢 Documento generado y descargado exitosamente', 'success');
 
-                    showAlert(`${result.message} - Documento Word descargado automáticamente`, 'success');
-                    updateStatus('🟢 Documento generado y descargado exitosamente', 'success');
-
-                    // Actualizar datos
-                    loadStats();
-                    loadHistory();
-                    if (currentUser.role === 'Administrador') {
-                        loadCounters();
-                    }
-                }
+                // Actualizar estadísticas locales
+                updateLocalStats();
+                
             } catch (error) {
+                console.error('Error generando documento:', error);
                 showAlert('Error generando documento', 'error');
             } finally {
                 setButtonLoading('generateBtn', false);
             }
+        }
+
+        // Variables para almacenamiento local
+        let localDocuments = [];
+        let localStats = {
+            totalDocuments: 0,
+            todayDocuments: 0,
+            activeDepartments: 0
+        };
+
+        function updateLocalStats() {
+            localStats.totalDocuments++;
+            
+            // Contar documentos de hoy
+            const today = new Date().toDateString();
+            localStats.todayDocuments = localDocuments.filter(doc => 
+                new Date(doc.date).toDateString() === today
+            ).length + 1;
+            
+            // Contar departamentos activos
+            const departments = new Set(localDocuments.map(doc => doc.department));
+            departments.add(currentDocument.department);
+            localStats.activeDepartments = departments.size;
+            
+            // Actualizar interfaz
+            document.getElementById('totalDocuments').textContent = localStats.totalDocuments;
+            document.getElementById('todayDocuments').textContent = localStats.todayDocuments;
+            document.getElementById('activeDepartments').textContent = localStats.activeDepartments;
+            
+            // Agregar documento al historial local
+            localDocuments.push({
+                document_number: currentDocument.number,
+                document_type: currentDocument.type,
+                department: currentDocument.department,
+                created_date: new Date().toISOString(),
+                status: 'Generado'
+            });
+            
+            // Actualizar historial
+            allDocuments = [...localDocuments];
+            updateHistoryTable(allDocuments);
+            updateHistoryInfo(allDocuments.length);
         }
 
         async function previewNext() {
@@ -1061,9 +1126,15 @@
                 const type = document.getElementById('documentType').value;
                 const department = document.getElementById('department').value;
                 
-                const data = await apiCall(`/next-number/${type}/${department}`);
-                showAlert(`Próximo número: ${data.documentNumber}`, 'success');
-                updateStatus('🟢 Sistema conectado - Base de datos activa', 'success');
+                // Simular siguiente número sin incrementar contador
+                const year = new Date().getFullYear();
+                const key = `${type}_${department}_${year}`;
+                const nextCounter = (localCounters[key] || 0) + 1;
+                const typePrefix = documentTypeMapping[type]?.prefix || 'Documento No.';
+                const nextNumber = `${typePrefix}SINTEL-${department}-${nextCounter.toString().padStart(3, '0')}-${year}`;
+                
+                showAlert(`Próximo número: ${nextNumber}`, 'success');
+                updateStatus('🟢 Sistema conectado - Funcionando localmente', 'success');
             } catch (error) {
                 showAlert('Error obteniendo próximo número', 'error');
             } finally {
@@ -1073,10 +1144,10 @@
 
         async function loadStats() {
             try {
-                const stats = await apiCall('/stats');
-                document.getElementById('totalDocuments').textContent = stats.totalDocuments;
-                document.getElementById('todayDocuments').textContent = stats.todayDocuments;
-                document.getElementById('activeDepartments').textContent = stats.activeDepartments;
+                // Usar estadísticas locales
+                document.getElementById('totalDocuments').textContent = localStats.totalDocuments;
+                document.getElementById('todayDocuments').textContent = localStats.todayDocuments;
+                document.getElementById('activeDepartments').textContent = localStats.activeDepartments;
             } catch (error) {
                 console.error('Error cargando estadísticas:', error);
             }
@@ -1084,10 +1155,9 @@
 
         async function loadHistory() {
             try {
-                const documents = await apiCall('/documents');
-                allDocuments = documents; // Guardar todos los documentos
-                updateHistoryTable(documents);
-                updateHistoryInfo(documents.length);
+                allDocuments = [...localDocuments];
+                updateHistoryTable(allDocuments);
+                updateHistoryInfo(allDocuments.length);
             } catch (error) {
                 console.error('Error cargando historial:', error);
                 document.getElementById('historyTable').innerHTML = `
@@ -1625,6 +1695,31 @@
             showAlert('Datos actualizados correctamente', 'success');
         }
 
+        // Función simplificada para admin (simulada)
+        async function loadCounters() {
+            if (!currentUser || currentUser.role !== 'Administrador') {
+                return;
+            }
+            
+            try {
+                const counters = [];
+                Object.keys(localCounters).forEach(key => {
+                    const [type, department, year] = key.split('_');
+                    counters.push({
+                        document_type: type,
+                        department: department,
+                        year: parseInt(year),
+                        counter: localCounters[key]
+                    });
+                });
+                
+                updateCountersDisplay(counters);
+            } catch (error) {
+                document.getElementById('countersStatus').innerHTML = 
+                    '<div style="color: #e74c3c;">Error cargando contadores</div>';
+            }
+        }
+
         // ================================
         // FUNCIONES AUXILIARES
         // ================================
@@ -1712,7 +1807,7 @@
         setInterval(function() {
             if (currentUser) {
                 loadStats();
-                loadHistory();
+                // loadHistory(); // Comentado para evitar refresh constante en modo local
             }
         }, 30000);
 
