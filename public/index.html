@@ -1025,20 +1025,11 @@
 
         async function generateDocument() {
             try {
-                const subject = document.getElementById('subject').value.trim();
-                if (!subject) {
-                    showAlert('Por favor ingrese el asunto del documento', 'error');
-                    return;
-                }
-
                 setButtonLoading('generateBtn', true);
                 
                 const documentData = {
                     type: document.getElementById('documentType').value,
-                    department: document.getElementById('department').value,
-                    subject: subject,
-                    recipient: document.getElementById('recipient').value,
-                    content: document.getElementById('content').value
+                    department: document.getElementById('department').value
                 };
 
                 const result = await apiCall('/generate-document', {
@@ -1063,11 +1054,6 @@
 
                     showAlert(`${result.message} - Documento Word descargado automáticamente`, 'success');
                     updateStatus('🟢 Documento generado y descargado exitosamente', 'success');
-                    
-                    // Limpiar formulario
-                    document.getElementById('subject').value = '';
-                    document.getElementById('recipient').value = '';
-                    document.getElementById('content').value = '';
 
                     // Actualizar datos
                     loadStats();
@@ -1503,10 +1489,6 @@
     day: 'numeric'
 })}\\par
 \\par
-${doc.recipient ? `\\ql\\b Para:\\b0 ${doc.recipient}\\par\\par` : ''}
-\\ql\\b Asunto:\\b0 ${doc.subject}\\par
-\\par
-\\ql ${(doc.content || getDefaultContentPlain(doc.type)).replace(/\n/g, '\\par ')}\\par
 \\par
 \\par
 \\par
@@ -1521,8 +1503,9 @@ ${doc.recipient ? `\\ql\\b Para:\\b0 ${doc.recipient}\\par\\par` : ''}
         function generateFileName(doc) {
             // Crear nombre de archivo limpio con extensión .rtf
             const cleanNumber = doc.number.replace(/[^a-zA-Z0-9\-]/g, '_');
-            const cleanSubject = doc.subject.substring(0, 30).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
-            return `${cleanNumber}_${cleanSubject}.rtf`;
+            const documentTypeName = documentTypeMapping[doc.type]?.name || doc.type;
+            const cleanType = documentTypeName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+            return `${cleanNumber}_${cleanType}.rtf`;
         }
 
         function downloadFile(content, fileName, mimeType) {
