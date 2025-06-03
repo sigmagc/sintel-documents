@@ -1472,9 +1472,9 @@
             
             // Agregar timestamp para evitar conflictos de nombres
             const timestamp = new Date().toISOString().slice(0,19).replace(/[T:]/g, '_');
-            const uniqueFileName = fileName.replace('.doc', `_${timestamp}.doc`);
+            const uniqueFileName = fileName.replace('.rtf', `_${timestamp}.rtf`);
             
-            downloadFile(docContent, uniqueFileName, 'application/msword');
+            downloadFile(docContent, uniqueFileName, 'application/rtf');
             
             console.log(`✅ Documento Word generado automáticamente: ${uniqueFileName}`);
         }
@@ -1485,44 +1485,50 @@
             const docContent = createWordContent(currentDocument);
             const fileName = generateFileName(currentDocument);
             
-            downloadFile(docContent, fileName, 'application/msword');
+            downloadFile(docContent, fileName, 'application/rtf');
             showAlert(`Documento ${fileName} descargado exitosamente`, 'success');
         }
 
         function createWordContent(doc) {
-            return `
-SISTEMA DE GESTIÓN DOCUMENTAL - SINTEL
-
-${doc.number}
-
-Samborondón, ${new Date().toLocaleDateString('es-ES', {
+            // Crear contenido en formato RTF (Rich Text Format) que Word reconoce nativamente
+            const rtfContent = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}
+\\f0\\fs24
+\\qc\\b SISTEMA DE GESTIÓN DOCUMENTAL - SINTEL\\b0\\par
+\\par
+\\ql\\b ${doc.number}\\b0\\par
+\\par
+\\qr Samborondón, ${new Date().toLocaleDateString('es-ES', {
     year: 'numeric',
     month: 'long', 
     day: 'numeric'
-})}
+})}\\par
+\\par
+${doc.recipient ? `\\ql\\b Para:\\b0 ${doc.recipient}\\par\\par` : ''}
+\\ql\\b Asunto:\\b0 ${doc.subject}\\par
+\\par
+\\ql ${(doc.content || getDefaultContentPlain(doc.type)).replace(/\n/g, '\\par ')}\\par
+\\par
+\\par
+\\par
+\\par
+\\qc _______________________\\par
+\\qc Firma y Sello\\par
+}`;
 
-${doc.recipient ? `Para: ${doc.recipient}\n\n` : ''}
-
-Asunto: ${doc.subject}
-
-${doc.content || getDefaultContentPlain(doc.type)}
-
-
-
-_______________________
-Firma y Sello
-            `;
+            return rtfContent;
         }
 
         function generateFileName(doc) {
-            // Crear nombre de archivo limpio
+            // Crear nombre de archivo limpio con extensión .rtf
             const cleanNumber = doc.number.replace(/[^a-zA-Z0-9\-]/g, '_');
-            const cleanSubject = doc.subject.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
-            return `${cleanNumber}_${cleanSubject}.doc`;
+            const cleanSubject = doc.subject.substring(0, 30).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+            return `${cleanNumber}_${cleanSubject}.rtf`;
         }
 
         function downloadFile(content, fileName, mimeType) {
-            const blob = new Blob([content], { type: mimeType });
+            // Usar MIME type específico para RTF
+            const actualMimeType = fileName.endsWith('.rtf') ? 'application/rtf' : mimeType;
+            const blob = new Blob([content], { type: actualMimeType });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1567,7 +1573,7 @@ Firma y Sello
                 // Pequeño delay para evitar saturar el navegador
                 await new Promise(resolve => setTimeout(resolve, 100));
                 
-                downloadFile(wordContent, fileName, 'application/msword');
+                downloadFile(wordContent, fileName, 'application/rtf');
             }
 
             showAlert(`✅ Descarga completada: ${allDocuments.length} documentos descargados`, 'success');
@@ -1634,7 +1640,7 @@ Firma y Sello
                 
                 await new Promise(resolve => setTimeout(resolve, 100));
                 
-                downloadFile(wordContent, fileName, 'application/msword');
+                downloadFile(wordContent, fileName, 'application/rtf');
             }
 
             showAlert(`✅ Descarga filtrada completada: ${filteredDocuments.length} documentos descargados`, 'success');
