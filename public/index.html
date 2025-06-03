@@ -377,7 +377,7 @@
             <h1>🏢 SINTEL</h1>
             <p>Sistema de Gestión Documental</p>
         </div>
-        <form class="login-form" onsubmit="login(event)">
+        <form class="login-form" onsubmit="return login(event)">
             <div class="form-group">
                 <label for="username">Usuario</label>
                 <input type="text" id="username" required placeholder="Ingrese su usuario">
@@ -387,6 +387,7 @@
                 <input type="password" id="password" required placeholder="Ingrese su contraseña">
             </div>
             <button type="submit" class="btn">🔐 Iniciar Sesión</button>
+            <button type="button" class="btn btn-secondary" onclick="testLogin()">🧪 Login como Admin (Test)</button>
         </form>
         <div id="loginAlert" class="alert alert-error" style="margin-top: 20px;">
             Usuario o contraseña incorrectos
@@ -984,10 +985,16 @@ Firma y Sello
         function login(event) {
             event.preventDefault();
             
+            console.log('Intentando login...');
+            
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             
+            console.log('Usuario:', username);
+            
             if (users[username] && users[username].password === password) {
+                console.log('Login exitoso!');
+                
                 currentUser = {
                     username: username,
                     ...users[username]
@@ -1004,11 +1011,14 @@ Firma y Sello
                 
                 showAlert(`Bienvenido, ${currentUser.name}`, 'success');
             } else {
+                console.log('Login fallido');
                 document.getElementById('loginAlert').style.display = 'block';
                 setTimeout(() => {
                     document.getElementById('loginAlert').style.display = 'none';
                 }, 3000);
             }
+            
+            return false;
         }
 
         function logout() {
