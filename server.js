@@ -54,6 +54,22 @@ async function initializeDatabase() {
     }
 }
 
+// Función auxiliar para asegurar que existe el contador
+async function ensureCounter(department, type, year) {
+    try {
+        // Intentar insertar el contador si no existe
+        await pool.query(
+            `INSERT INTO sintel_counters (department, document_type, counter, year) 
+             VALUES ($1, $2, 0, $3) 
+             ON CONFLICT (department, document_type, year) 
+             DO NOTHING`,
+            [department, type, year]
+        );
+    } catch (err) {
+        console.error('Error asegurando contador:', err);
+    }
+}
+
 // Rutas API
 
 // Obtener próximo número de documento
@@ -62,20 +78,18 @@ app.get('/api/next-number/:type/:department', async (req, res) => {
         const { type, department } = req.params;
         const currentYear = new Date().getFullYear();
 
-        // Obtener o crear contador
-        const result = await pool.query(
-            `INSERT INTO sintel_counters (department, document_type, counter, year) 
-             VALUES ($1, $2, 0, $3) 
-             ON CONFLICT (department, document_type, year) 
-             DO NOTHING 
-             RETURNING counter`,
-            [department, type, currentYear]
-        );
+        // Asegurar que existe el contador
+        await ensureCounter(department, type, currentYear);
 
+        // Obtener contador actual
         const counterResult = await pool.query(
             'SELECT counter FROM sintel_counters WHERE department = $1 AND document_type = $2 AND year = $3',
             [department, type, currentYear]
         );
+
+        if (counterResult.rows.length === 0) {
+            throw new Error('No se pudo obtener el contador');
+        }
 
         const nextNumber = counterResult.rows[0].counter + 1;
         const paddedNumber = String(nextNumber).padStart(3, '0');
@@ -95,41 +109,74 @@ app.post('/api/generate-document', async (req, res) => {
         const { type, department, subject, recipient, content } = req.body;
         const currentYear = new Date().getFullYear();
 
-        // Incrementar contador
-        await pool.query(
-            `UPDATE sintel_counters 
-             SET counter = counter + 1 
-             WHERE department = $1 AND document_type = $2 AND year = $3`,
-            [department, type, currentYear]
-        );
+        // Validar datos requeridos
+        if (!type || !department || !subject) {
+            return res.status(400).json({ 
+                error: 'Faltan datos requeridos: type, department, subject' 
+            });
+        }
 
-        // Obtener nuevo número
-        const counterResult = await pool.query(
-            'SELECT counter FROM sintel_counters WHERE department = $1 AND document_type = $2 AND year = $3',
-            [department, type, currentYear]
-        );
+        // Asegurar que existe el contador
+        await ensureCounter(department, type, currentYear);
 
-        const currentNumber = counterResult.rows[0].counter;
-        const paddedNumber = String(currentNumber).padStart(3, '0');
-        const prefix = type === 'oficio' ? 'Oficio No.' : 'Memorando No.';
-        const documentNumber = `${prefix}SINTEL-${department}-${paddedNumber}-${currentYear}`;
+        // Incrementar contador en una transacción
+        const client = await pool.connect();
+        
+        try {
+            await client.query('BEGIN');
 
-        // Guardar documento
-        await pool.query(
-            `INSERT INTO sintel_documents 
-             (document_number, document_type, department, subject, recipient, content) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [documentNumber, type, department, subject, recipient, content]
-        );
+            // Incrementar contador
+            await client.query(
+                `UPDATE sintel_counters 
+                 SET counter = counter + 1 
+                 WHERE department = $1 AND document_type = $2 AND year = $3`,
+                [department, type, currentYear]
+            );
 
-        res.json({
-            success: true,
-            documentNumber,
-            message: 'Documento generado exitosamente'
-        });
+            // Obtener nuevo número
+            const counterResult = await client.query(
+                'SELECT counter FROM sintel_counters WHERE department = $1 AND document_type = $2 AND year = $3',
+                [department, type, currentYear]
+            );
+
+            if (counterResult.rows.length === 0) {
+                throw new Error('Error obteniendo contador después de incrementar');
+            }
+
+            const currentNumber = counterResult.rows[0].counter;
+            const paddedNumber = String(currentNumber).padStart(3, '0');
+            const prefix = type === 'oficio' ? 'Oficio No.' : 'Memorando No.';
+            const documentNumber = `${prefix}SINTEL-${department}-${paddedNumber}-${currentYear}`;
+
+            // Guardar documento
+            await client.query(
+                `INSERT INTO sintel_documents 
+                 (document_number, document_type, department, subject, recipient, content) 
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [documentNumber, type, department, subject, recipient || '', content || '']
+            );
+
+            await client.query('COMMIT');
+
+            res.json({
+                success: true,
+                documentNumber,
+                message: 'Documento generado exitosamente'
+            });
+
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
+        }
+
     } catch (err) {
         console.error('Error generando documento:', err);
-        res.status(500).json({ error: 'Error generando documento' });
+        res.status(500).json({ 
+            error: 'Error generando documento',
+            details: err.message 
+        });
     }
 });
 
