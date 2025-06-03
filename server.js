@@ -1,4 +1,4 @@
-// server.js - Servidor principal para Render
+// server.js - Servidor principal para Render con Panel de Administración
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
@@ -70,7 +70,9 @@ async function ensureCounter(department, type, year) {
     }
 }
 
-// Rutas API
+// ================================
+// RUTAS PRINCIPALES
+// ================================
 
 // Obtener próximo número de documento
 app.get('/api/next-number/:type/:department', async (req, res) => {
@@ -184,7 +186,7 @@ app.post('/api/generate-document', async (req, res) => {
 app.get('/api/documents', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT document_number, document_type, department, subject, 
+            `SELECT id, document_number, document_type, department, subject, 
                     recipient, created_date, status 
              FROM sintel_documents 
              ORDER BY created_date DESC 
@@ -225,18 +227,10 @@ app.get('/api/stats', async (req, res) => {
     }
 });
 
-// Servir página principal
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// ================================
+// RUTAS DE ADMINISTRACIÓN
+// ================================
 
-// Inicializar servidor
-async function startServer() {
-    await initializeDatabase();
-    app.listen(port, () => {
-        console.log(`Servidor SINTEL ejecutándose en puerto ${port}`);
-    });
-}
 // ELIMINAR DOCUMENTO ESPECÍFICO
 app.delete('/api/delete-document/:id', async (req, res) => {
     try {
@@ -375,4 +369,25 @@ app.get('/api/counters', async (req, res) => {
         res.status(500).json({ error: 'Error obteniendo contadores' });
     }
 });
+
+// ================================
+// RUTAS ESTÁTICAS
+// ================================
+
+// Servir página principal
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ================================
+// INICIALIZAR SERVIDOR
+// ================================
+
+async function startServer() {
+    await initializeDatabase();
+    app.listen(port, () => {
+        console.log(`Servidor SINTEL ejecutándose en puerto ${port}`);
+    });
+}
+
 startServer();
