@@ -584,6 +584,46 @@
             <!-- Historial -->
             <div class="history-section">
                 <h2>📋 Historial de Documentos</h2>
+                
+                <!-- Filtros del historial -->
+                <div class="form-section" style="margin-bottom: 20px; padding: 20px;">
+                    <h3>🔍 Filtros de Búsqueda</h3>
+                    <div class="row">
+                        <div>
+                            <div class="form-group">
+                                <label for="filterType">Filtrar por Tipo de Documento</label>
+                                <select id="filterType" onchange="filterHistory()">
+                                    <option value="">-- Todos los tipos --</option>
+                                    <option value="oficio">Oficio</option>
+                                    <option value="memorando">Memorando</option>
+                                    <option value="orden_compra">Orden de Compra</option>
+                                    <option value="proforma">Proforma</option>
+                                    <option value="acta_entrega">Acta de Entrega</option>
+                                    <option value="acta_recepcion">Acta de Recepción</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-group">
+                                <label for="filterDepartment">Filtrar por Departamento</label>
+                                <select id="filterDepartment" onchange="filterHistory()">
+                                    <option value="">-- Todos los departamentos --</option>
+                                    <option value="GGE">Gerencia General (GGE)</option>
+                                    <option value="CAF">Contabilidad y Finanzas (CAF)</option>
+                                    <option value="PMO">Oficina de Proyectos (PMO)</option>
+                                    <option value="VTA">Ventas (VTA)</option>
+                                    <option value="RHU">Recursos Humanos (RHU)</option>
+                                    <option value="TEC">Técnico (TEC)</option>
+                                    <option value="LEG">Legal (LEG)</option>
+                                    <option value="ADM">Administración (ADM)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="clearFilters()">🗑️ Limpiar Filtros</button>
+                    <button class="btn btn-secondary" onclick="loadHistory()">🔄 Actualizar Historial</button>
+                </div>
+
                 <table class="history-table">
                     <thead>
                         <tr>
@@ -604,6 +644,11 @@
                         </tr>
                     </tbody>
                 </table>
+                
+                <!-- Información de resultados -->
+                <div id="historyInfo" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; text-align: center; display: none;">
+                    <span id="historyCount">0</span> documentos encontrados
+                </div>
             </div>
         </div>
     </div>
@@ -612,6 +657,7 @@
         // Variables globales
         let currentDocument = null;
         let currentUser = null;
+        let allDocuments = []; // Almacenar todos los documentos para filtrado
 
         // Usuarios del sistema
         const users = {
@@ -886,7 +932,9 @@
         async function loadHistory() {
             try {
                 const documents = await apiCall('/documents');
+                allDocuments = documents; // Guardar todos los documentos
                 updateHistoryTable(documents);
+                updateHistoryInfo(documents.length);
             } catch (error) {
                 console.error('Error cargando historial:', error);
                 document.getElementById('historyTable').innerHTML = `
@@ -896,6 +944,7 @@
                         </td>
                     </tr>
                 `;
+                updateHistoryInfo(0);
             }
         }
 
@@ -907,7 +956,7 @@
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="7" style="text-align: center; color: #7f8c8d;">
-                            No hay documentos generados aún
+                            No hay documentos que coincidan con los filtros
                         </td>
                     </tr>
                 `;
@@ -937,6 +986,74 @@
                     ${actionsCell}
                 `;
             });
+        }
+
+        // ================================
+        // FUNCIONES DE FILTRADO
+        // ================================
+
+        function filterHistory() {
+            const typeFilter = document.getElementById('filterType').value;
+            const departmentFilter = document.getElementById('filterDepartment').value;
+            
+            let filteredDocuments = allDocuments;
+            
+            // Filtrar por tipo de documento
+            if (typeFilter) {
+                filteredDocuments = filteredDocuments.filter(doc => 
+                    doc.document_type === typeFilter
+                );
+            }
+            
+            // Filtrar por departamento
+            if (departmentFilter) {
+                filteredDocuments = filteredDocuments.filter(doc => 
+                    doc.department === departmentFilter
+                );
+            }
+            
+            // Actualizar tabla e información
+            updateHistoryTable(filteredDocuments);
+            updateHistoryInfo(filteredDocuments.length);
+            
+            // Mostrar información de filtros aplicados
+            const activeFilters = [];
+            if (typeFilter) {
+                const typeName = documentTypeMapping[typeFilter]?.name || typeFilter;
+                activeFilters.push(`Tipo: ${typeName}`);
+            }
+            if (departmentFilter) {
+                activeFilters.push(`Departamento: ${departmentFilter}`);
+            }
+            
+            if (activeFilters.length > 0) {
+                showAlert(`Filtros aplicados: ${activeFilters.join(', ')}`, 'success');
+            }
+        }
+
+        function clearFilters() {
+            document.getElementById('filterType').value = '';
+            document.getElementById('filterDepartment').value = '';
+            updateHistoryTable(allDocuments);
+            updateHistoryInfo(allDocuments.length);
+            showAlert('Filtros limpiados - Mostrando todos los documentos', 'success');
+        }
+
+        function updateHistoryInfo(count) {
+            const historyInfo = document.getElementById('historyInfo');
+            const historyCount = document.getElementById('historyCount');
+            
+            historyCount.textContent = count;
+            historyInfo.style.display = 'block';
+            
+            // Cambiar color según la cantidad
+            if (count === 0) {
+                historyInfo.style.background = '#f8d7da';
+                historyInfo.style.color = '#721c24';
+            } else {
+                historyInfo.style.background = '#d4edda';
+                historyInfo.style.color = '#155724';
+            }
         }
 
         // ================================
