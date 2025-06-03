@@ -343,13 +343,17 @@
                             <select id="documentType">
                                 <option value="oficio">Oficio</option>
                                 <option value="memorando">Memorando</option>
+                                <option value="orden_compra">Orden de Compra</option>
+                                <option value="proforma">Proforma</option>
+                                <option value="acta_entrega">Acta de Entrega</option>
+                                <option value="acta_recepcion">Acta de Recepción</option>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label for="department">Departamento</label>
                             <select id="department">
-                                <option value="GGE">Gerencia General (GEE)</option>
+                                <option value="GGE">Gerencia General (GGE)</option>
                                 <option value="CAF">Contabilidad y Finanzas (CAF)</option>
                                 <option value="PMO">Oficina de Proyectos (PMO)</option>
                                 <option value="VTA">Ventas (VTA)</option>
@@ -427,6 +431,10 @@
                                 <option value="">-- Todos los tipos --</option>
                                 <option value="oficio">Oficio</option>
                                 <option value="memorando">Memorando</option>
+                                <option value="orden_compra">Orden de Compra</option>
+                                <option value="proforma">Proforma</option>
+                                <option value="acta_entrega">Acta de Entrega</option>
+                                <option value="acta_recepcion">Acta de Recepción</option>
                             </select>
                         </div>
                         
@@ -488,6 +496,16 @@
 
     <script>
         let currentDocument = null;
+
+        // Mapeo de tipos de documento para la numeración
+        const documentTypeMapping = {
+            'oficio': { prefix: 'Oficio No.', name: 'Oficio' },
+            'memorando': { prefix: 'Memorando No.', name: 'Memorando' },
+            'orden_compra': { prefix: 'Orden de Compra No.', name: 'Orden de Compra' },
+            'proforma': { prefix: 'Proforma No.', name: 'Proforma' },
+            'acta_entrega': { prefix: 'Acta de Entrega No.', name: 'Acta de Entrega' },
+            'acta_recepcion': { prefix: 'Acta de Recepción No.', name: 'Acta de Recepción' }
+        };
 
         // Cargar datos al iniciar
         window.addEventListener('load', function() {
@@ -636,9 +654,11 @@
             documents.forEach(doc => {
                 const row = tbody.insertRow();
                 const date = new Date(doc.created_date).toLocaleString('es-ES');
+                const documentTypeName = documentTypeMapping[doc.document_type]?.name || doc.document_type;
+                
                 row.innerHTML = `
                     <td><strong>${doc.document_number}</strong></td>
-                    <td>${doc.document_type.charAt(0).toUpperCase() + doc.document_type.slice(1)}</td>
+                    <td>${documentTypeName}</td>
                     <td>${doc.department}</td>
                     <td>${doc.subject}</td>
                     <td>${date}</td>
@@ -748,7 +768,7 @@
                 }
                 
                 const confirmation = confirm(
-                    `¿Reiniciar contador ${type} para ${department} ${new Date().getFullYear()}?`
+                    `¿Reiniciar contador ${documentTypeMapping[type]?.name || type} para ${department} ${new Date().getFullYear()}?`
                 );
                 
                 if (!confirmation) return;
@@ -797,9 +817,10 @@
             let html = '';
             counters.forEach(counter => {
                 const className = counter.counter > 0 ? 'has-documents' : 'empty';
+                const typeName = documentTypeMapping[counter.document_type]?.name || counter.document_type;
                 html += `
                     <div class="admin-counter ${className}">
-                        <strong>${counter.department} - ${counter.document_type.toUpperCase()}</strong>
+                        <strong>${counter.department} - ${typeName}</strong>
                         <span style="float: right;">
                             Año: ${counter.year} | Contador: <strong>${counter.counter}</strong>
                         </span>
@@ -817,6 +838,9 @@
                 day: 'numeric'
             });
 
+            // Obtener el nombre del tipo de documento
+            const documentTypeName = documentTypeMapping[doc.type]?.name || doc.type;
+
             return `
                 <div style="text-align: right; margin-bottom: 30px;">
                     <strong>Samborondón, ${today}</strong>
@@ -833,7 +857,7 @@
                 </div>
                 
                 <div style="margin-bottom: 30px; text-align: justify; line-height: 1.6;">
-                    ${doc.content || 'Estimado(a) señor(a),<br><br>Por medio del presente documento...<br><br>Atentamente,'}
+                    ${doc.content || getDefaultContent(doc.type)}
                 </div>
                 
                 <div style="margin-top: 80px;">
@@ -844,8 +868,24 @@
             `;
         }
 
+        // Función para obtener contenido por defecto según el tipo de documento
+        function getDefaultContent(documentType) {
+            const defaultContent = {
+                'oficio': 'Estimado(a) señor(a),<br><br>Por medio del presente documento...<br><br>Atentamente,',
+                'memorando': 'Para: [Destinatario]<br>De: [Remitente]<br><br>Por medio del presente memorando...<br><br>Cordialmente,',
+                'orden_compra': 'Estimado proveedor,<br><br>Por medio de la presente, solicitamos cotización para los siguientes productos/servicios:<br><br>[Detalle de productos/servicios]<br><br>Favor enviar cotización a la brevedad posible.<br><br>Atentamente,',
+                'proforma': 'Estimado cliente,<br><br>De acuerdo a su solicitud, adjuntamos la proforma correspondiente:<br><br>[Detalle de productos/servicios]<br><br>La presente proforma tiene una validez de 30 días.<br><br>Cordialmente,',
+                'acta_entrega': 'ACTA DE ENTREGA<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se hace entrega de:<br><br>[Detalle de lo entregado]<br><br>ENTREGA: _____________________<br>RECIBE: _____________________',
+                'acta_recepcion': 'ACTA DE RECEPCIÓN<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:<br><br>[Detalle de lo recibido]<br><br>ESTADO: Conforme / No conforme<br><br>RECIBE: _____________________<br>ENTREGA: _____________________'
+            };
+            
+            return defaultContent[documentType] || 'Contenido del documento...';
+        }
+
         function downloadWord() {
             if (!currentDocument) return;
+
+            const documentTypeName = documentTypeMapping[currentDocument.type]?.name || currentDocument.type;
 
             const docContent = `
 SISTEMA DE GESTIÓN DOCUMENTAL - SINTEL
@@ -862,7 +902,7 @@ ${currentDocument.recipient ? `Para: ${currentDocument.recipient}\n\n` : ''}
 
 Asunto: ${currentDocument.subject}
 
-${currentDocument.content || 'Estimado(a) señor(a),\n\nPor medio del presente documento...\n\nAtentamente,'}
+${currentDocument.content || getDefaultContentPlain(currentDocument.type)}
 
 
 
@@ -879,6 +919,20 @@ Firma y Sello
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+
+        // Función para obtener contenido por defecto en texto plano (para descarga)
+        function getDefaultContentPlain(documentType) {
+            const defaultContent = {
+                'oficio': 'Estimado(a) señor(a),\n\nPor medio del presente documento...\n\nAtentamente,',
+                'memorando': 'Para: [Destinatario]\nDe: [Remitente]\n\nPor medio del presente memorando...\n\nCordialmente,',
+                'orden_compra': 'Estimado proveedor,\n\nPor medio de la presente, solicitamos cotización para los siguientes productos/servicios:\n\n[Detalle de productos/servicios]\n\nFavor enviar cotización a la brevedad posible.\n\nAtentamente,',
+                'proforma': 'Estimado cliente,\n\nDe acuerdo a su solicitud, adjuntamos la proforma correspondiente:\n\n[Detalle de productos/servicios]\n\nLa presente proforma tiene una validez de 30 días.\n\nCordialmente,',
+                'acta_entrega': 'ACTA DE ENTREGA\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se hace entrega de:\n\n[Detalle de lo entregado]\n\nENTREGA: _____________________\nRECIBE: _____________________',
+                'acta_recepcion': 'ACTA DE RECEPCIÓN\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:\n\n[Detalle de lo recibido]\n\nESTADO: Conforme / No conforme\n\nRECIBE: _____________________\nENTREGA: _____________________'
+            };
+            
+            return defaultContent[documentType] || 'Contenido del documento...';
         }
 
         function clearPreview() {
