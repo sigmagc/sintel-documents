@@ -92,6 +92,7 @@
             padding: 40px;
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: block; /* Visible por defecto */
         }
 
         .login-header {
@@ -392,7 +393,7 @@
         </div>
     </div>
 
-    <!-- Main Application Container -->
+    <!-- Main Application Container (Initially hidden) -->
     <div id="mainContainer" class="container hidden">
         <div class="header">
             <h1>🏢 SINTEL</h1>
@@ -1029,7 +1030,9 @@ Firma y Sello
                 currentUser = JSON.parse(savedUser);
                 showMainApplication();
                 setupUserPermissions();
+                return true;
             }
+            return false;
         }
 
         function showMainApplication() {
@@ -1073,6 +1076,12 @@ Firma y Sello
         // Cargar datos al iniciar
         window.addEventListener('load', function() {
             checkSession();
+            
+            // Si no hay usuario logueado, mostrar login
+            if (!currentUser) {
+                document.getElementById('loginContainer').classList.remove('hidden');
+                document.getElementById('mainContainer').classList.add('hidden');
+            }
         });
 
         // Funciones API
