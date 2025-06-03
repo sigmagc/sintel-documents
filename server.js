@@ -95,7 +95,15 @@ app.get('/api/next-number/:type/:department', async (req, res) => {
 
         const nextNumber = counterResult.rows[0].counter + 1;
         const paddedNumber = String(nextNumber).padStart(3, '0');
-        const prefix = type === 'oficio' ? 'Oficio No.' : 'Memorando No.';
+        const documentTypes = {
+    'oficio': 'Oficio No.',
+    'memorando': 'Memorando No.',
+    'orden_compra': 'Orden de Compra No.',
+    'proforma': 'Proforma No.',
+    'acta_entrega': 'Acta de Entrega No.',
+    'acta_recepcion': 'Acta de Recepción No.'
+};
+const prefix = documentTypes[type] || 'Documento No.';
         const documentNumber = `${prefix}SINTEL-${department}-${paddedNumber}-${currentYear}`;
 
         res.json({ documentNumber, nextNumber });
@@ -147,7 +155,15 @@ app.post('/api/generate-document', async (req, res) => {
 
             const currentNumber = counterResult.rows[0].counter;
             const paddedNumber = String(currentNumber).padStart(3, '0');
-            const prefix = type === 'oficio' ? 'Oficio No.' : 'Memorando No.';
+            const documentTypes = {
+    'oficio': 'Oficio No.',
+    'memorando': 'Memorando No.',
+    'orden_compra': 'Orden de Compra No.',
+    'proforma': 'Proforma No.',
+    'acta_entrega': 'Acta de Entrega No.',
+    'acta_recepcion': 'Acta de Recepción No.'
+};
+const prefix = documentTypes[type] || 'Documento No.';
             const documentNumber = `${prefix}SINTEL-${department}-${paddedNumber}-${currentYear}`;
 
             // Guardar documento
