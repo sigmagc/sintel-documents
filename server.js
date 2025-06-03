@@ -1,0 +1,194 @@
+// server.js - Servidor principal para Render
+const express = require('express');
+const { Pool } = require('pg');
+const path = require('path');
+const cors = require('cors');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// Configuración de PostgreSQL
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Inicializar base de datos
+async function initializeDatabase() {
+    try {
+        // Tabla para contadores
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS sintel_counters (
+                id SERIAL PRIMARY KEY,
+                department VARCHAR(10) NOT NULL,
+                document_type VARCHAR(20) NOT NULL,
+                counter INTEGER DEFAULT 0,
+                year INTEGER NOT NULL,
+                UNIQUE(department, document_type, year)
+            )
+        `);
+
+        // Tabla para documentos
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS sintel_documents (
+                id SERIAL PRIMARY KEY,
+                document_number VARCHAR(100) UNIQUE NOT NULL,
+                document_type VARCHAR(20) NOT NULL,
+                department VARCHAR(10) NOT NULL,
+                subject TEXT NOT NULL,
+                recipient VARCHAR(255),
+                content TEXT,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                status VARCHAR(20) DEFAULT 'Activo'
+            )
+        `);
+
+        console.log('Base de datos inicializada correctamente');
+    } catch (err) {
+        console.error('Error inicializando base de datos:', err);
+    }
+}
+
+// Rutas API
+
+// Obtener próximo número de documento
+app.get('/api/next-number/:type/:department', async (req, res) => {
+    try {
+        const { type, department } = req.params;
+        const currentYear = new Date().getFullYear();
+
+        // Obtener o crear contador
+        const result = await pool.query(
+            `INSERT INTO sintel_counters (department, document_type, counter, year) 
+             VALUES ($1, $2, 0, $3) 
+             ON CONFLICT (department, document_type, year) 
+             DO NOTHING 
+             RETURNING counter`,
+            [department, type, currentYear]
+        );
+
+        const counterResult = await pool.query(
+            'SELECT counter FROM sintel_counters WHERE department = $1 AND document_type = $2 AND year = $3',
+            [department, type, currentYear]
+        );
+
+        const nextNumber = counterResult.rows[0].counter + 1;
+        const paddedNumber = String(nextNumber).padStart(3, '0');
+        const prefix = type === 'oficio' ? 'Oficio No.' : 'Memorando No.';
+        const documentNumber = `${prefix}SINTEL-${department}-${paddedNumber}-${currentYear}`;
+
+        res.json({ documentNumber, nextNumber });
+    } catch (err) {
+        console.error('Error obteniendo próximo número:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Generar documento
+app.post('/api/generate-document', async (req, res) => {
+    try {
+        const { type, department, subject, recipient, content } = req.body;
+        const currentYear = new Date().getFullYear();
+
+        // Incrementar contador
+        await pool.query(
+            `UPDATE sintel_counters 
+             SET counter = counter + 1 
+             WHERE department = $1 AND document_type = $2 AND year = $3`,
+            [department, type, currentYear]
+        );
+
+        // Obtener nuevo número
+        const counterResult = await pool.query(
+            'SELECT counter FROM sintel_counters WHERE department = $1 AND document_type = $2 AND year = $3',
+            [department, type, currentYear]
+        );
+
+        const currentNumber = counterResult.rows[0].counter;
+        const paddedNumber = String(currentNumber).padStart(3, '0');
+        const prefix = type === 'oficio' ? 'Oficio No.' : 'Memorando No.';
+        const documentNumber = `${prefix}SINTEL-${department}-${paddedNumber}-${currentYear}`;
+
+        // Guardar documento
+        await pool.query(
+            `INSERT INTO sintel_documents 
+             (document_number, document_type, department, subject, recipient, content) 
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [documentNumber, type, department, subject, recipient, content]
+        );
+
+        res.json({
+            success: true,
+            documentNumber,
+            message: 'Documento generado exitosamente'
+        });
+    } catch (err) {
+        console.error('Error generando documento:', err);
+        res.status(500).json({ error: 'Error generando documento' });
+    }
+});
+
+// Obtener historial de documentos
+app.get('/api/documents', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT document_number, document_type, department, subject, 
+                    recipient, created_date, status 
+             FROM sintel_documents 
+             ORDER BY created_date DESC 
+             LIMIT 50`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error obteniendo documentos:', err);
+        res.status(500).json({ error: 'Error obteniendo documentos' });
+    }
+});
+
+// Obtener estadísticas
+app.get('/api/stats', async (req, res) => {
+    try {
+        const totalDocsResult = await pool.query('SELECT COUNT(*) as total FROM sintel_documents');
+        
+        const todayDocsResult = await pool.query(
+            `SELECT COUNT(*) as today 
+             FROM sintel_documents 
+             WHERE DATE(created_date) = CURRENT_DATE`
+        );
+
+        const activeDeptResult = await pool.query(
+            `SELECT COUNT(DISTINCT department) as active 
+             FROM sintel_documents 
+             WHERE created_date >= CURRENT_DATE - INTERVAL '30 days'`
+        );
+
+        res.json({
+            totalDocuments: parseInt(totalDocsResult.rows[0].total),
+            todayDocuments: parseInt(todayDocsResult.rows[0].today),
+            activeDepartments: parseInt(activeDeptResult.rows[0].active)
+        });
+    } catch (err) {
+        console.error('Error obteniendo estadísticas:', err);
+        res.status(500).json({ error: 'Error obteniendo estadísticas' });
+    }
+});
+
+// Servir página principal
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Inicializar servidor
+async function startServer() {
+    await initializeDatabase();
+    app.listen(port, () => {
+        console.log(`Servidor SINTEL ejecutándose en puerto ${port}`);
+    });
+}
+
+startServer();

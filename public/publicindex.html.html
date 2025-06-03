@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión Documental SINTEL</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .status-bar {
+            background: #27ae60;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+
+        .document-preview {
+            background: white;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 30px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .document-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #ecf0f1;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .history-section {
+            margin-top: 40px;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .history-table th {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        .history-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .history-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-active {
+            background: #27ae60;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 SINTEL</h1>
+            <p>Sistema de Gestión Documental</p>
+        </div>
+
+        <div class="status-bar" id="statusBar">
+            🟢 Sistema conectado - Base de datos PostgreSQL activa
+        </div>
+
+        <div class="main-content">
+            <div id="alertContainer"></div>
+
+            <!-- Estadísticas -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalDocuments">-</div>
+                    <div class="stat-label">Documentos Generados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="todayDocuments">-</div>
+                    <div class="stat-label">Documentos Hoy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeDepartments">-</div>
+                    <div class="stat-label">Departamentos Activos</div>
+                </div>
+            </div>
+
+            <!-- Formulario de generación -->
+            <div class="form-section">
+                <h2>🆕 Generar Nuevo Documento</h2>
+                
+                <div class="row">
+                    <div>
+                        <div class="form-group">
+                            <label for="documentType">Tipo de Documento</label>
+                            <select id="documentType">
+                                <option value="oficio">Oficio</option>
+                                <option value="memorando">Memorando</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="department">Departamento</label>
+                            <select id="department">
+                                <option value="GGE">Gerencia General (GGE)</option>
+                                <option value="CAF">Contabilidad y Finanzas (CAF)</option>
+                                <option value="PMO">Oficina de Proyectos (PMO)</option>
+                                <option value="VTA">Ventas (VTA)</option>
+                                <option value="RHU">Recursos Humanos (RHU)</option>
+                                <option value="TEC">Técnico (TEC)</option>
+                                <option value="LEG">Legal (LEG)</option>
+                                <option value="ADM">Administración (ADM)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="subject">Asunto del Documento *</label>
+                            <input type="text" id="subject" placeholder="Ingrese el asunto del documento" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="recipient">Destinatario</label>
+                            <input type="text" id="recipient" placeholder="Nombre del destinatario">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="form-group">
+                            <label for="content">Contenido del Documento</label>
+                            <textarea id="content" rows="8" placeholder="Escriba el contenido del documento aquí..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn" onclick="generateDocument()" id="generateBtn">
+                    📄 Generar Documento
+                </button>
+                <button class="btn btn-secondary" onclick="previewNext()" id="previewBtn">
+                    👁️ Ver Próximo Número
+                </button>
+                <button class="btn btn-secondary" onclick="refreshData()">
+                    🔄 Actualizar Datos
+                </button>
+            </div>
+
+            <!-- Vista previa del documento -->
+            <div id="documentPreview" class="document-preview" style="display: none;">
+                <div class="document-number" id="generatedNumber"></div>
+                <div id="documentContent"></div>
+                <br>
+                <button class="btn" onclick="downloadWord()">📥 Descargar Word</button>
+                <button class="btn btn-secondary" onclick="clearPreview()">🗑️ Limpiar Vista</button>
+            </div>
+
+            <!-- Historial -->
+            <div class="history-section">
+                <h2>📋 Historial de Documentos</h2>
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Tipo</th>
+                            <th>Departamento</th>
+                            <th>Asunto</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 30px;">
+                                <div class="loading"></div> Cargando historial...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDocument = null;
+
+        // Cargar datos al iniciar
+        window.addEventListener('load', function() {
+            loadStats();
+            loadHistory();
+            showAlert('Sistema iniciado correctamente - Conectado a base de datos PostgreSQL', 'success');
+        });
+
+        // Funciones API
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`/api${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                updateStatus('🔴 Error de conexión', 'error');
+                throw error;
+            }
+        }
+
+        async function previewNext() {
+            try {
+                setButtonLoading('previewBtn', true);
+                const type = document.getElementById('documentType').value;
+                const department = document.getElementById('department').value;
+                
+                const data = await apiCall(`/next-number/${type}/${department}`);
+                showAlert(`Próximo número: ${data.documentNumber}`, 'success');
+                updateStatus('🟢 Sistema conectado - Base de datos activa', 'success');
+            } catch (error) {
+                showAlert('Error obteniendo próximo número', 'error');
+            } finally {
+                setButtonLoading('previewBtn', false);
+            }
+        }
+
+        async function generateDocument() {
+            try {
+                const subject = document.getElementById('subject').value.trim();
+                if (!subject) {
+                    showAlert('Por favor ingrese el asunto del documento', 'error');
+                    return;
+                }
+
+                setButtonLoading('generateBtn', true);
+                
+                const documentData = {
+                    type: document.getElementById('documentType').value,
+                    department: document.getElementById('department').value,
+                    subject: subject,
+                    recipient: document.getElementById('recipient').value,
+                    content: document.getElementById('content').value
+                };
+
+                const result = await apiCall('/generate-document', {
+                    method: 'POST',
+                    body: JSON.stringify(documentData)
+                });
+
+                if (result.success) {
+                    currentDocument = {
+                        ...documentData,
+                        number: result.documentNumber,
+                        date: new Date().toLocaleString('es-ES')
+                    };
+
+                    // Mostrar vista previa
+                    document.getElementById('generatedNumber').textContent = result.documentNumber;
+                    document.getElementById('documentContent').innerHTML = createDocumentHTML(currentDocument);
+                    document.getElementById('documentPreview').style.display = 'block';
+
+                    showAlert(result.message, 'success');
+                    updateStatus('🟢 Documento generado exitosamente', 'success');
+                    
+                    // Limpiar formulario
+                    document.getElementById('subject').value = '';
+                    document.getElementById('recipient').value = '';
+                    document.getElementById('content').value = '';
+
+                    // Actualizar estadísticas e historial
+                    loadStats();
+                    loadHistory();
+                }
+            } catch (error) {
+                showAlert('Error generando documento', 'error');
+            } finally {
+                setButtonLoading('generateBtn', false);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const stats = await apiCall('/stats');
+                document.getElementById('totalDocuments').textContent = stats.totalDocuments;
+                document.getElementById('todayDocuments').textContent = stats.todayDocuments;
+                document.getElementById('activeDepartments').textContent = stats.activeDepartments;
+            } catch (error) {
+                console.error('Error cargando estadísticas:', error);
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const documents = await apiCall('/documents');
+                updateHistoryTable(documents);
+            } catch (error) {
+                console.error('Error cargando historial:', error);
+                document.getElementById('historyTable').innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #e74c3c;">
+                            Error cargando historial
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function updateHistoryTable(documents) {
+            const tbody = document.getElementById('historyTable');
+            
+            if (documents.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #7f8c8d;">
+                            No hay documentos generados aún
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            documents.forEach(doc => {
+                const row = tbody.insertRow();
+                const date = new Date(doc.created_date).toLocaleString('es-ES');
+                row.innerHTML = `
+                    <td><strong>${doc.document_number}</strong></td>
+                    <td>${doc.document_type.charAt(0).toUpperCase() + doc.document_type.slice(1)}</td>
+                    <td>${doc.department}</td>
+                    <td>${doc.subject}</td>
+                    <td>${date}</td>
+                    <td><span class="status-indicator status-active"></span>${doc.status}</td>
+                `;
+            });
+        }
+
+        function createDocumentHTML(doc) {
+            const today = new Date().toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            return `
+                <div style="text-align: right; margin-bottom: 30px;">
+                    <strong>Samborondón, ${today}</strong>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <strong>${doc.number}</strong>
+                </div>
+                
+                ${doc.recipient ? `<div style="margin-bottom: 20px;"><strong>Para:</strong> ${doc.recipient}</div>` : ''}
+                
+                <div style="margin-bottom: 20px;">
+                    <strong>Asunto:</strong> ${doc.subject}
+                </div>
+                
+                <div style="margin-bottom: 30px; text-align: justify; line-height: 1.6;">
+                    ${doc.content || 'Estimado(a) señor(a),<br><br>Por medio del presente documento...<br><br>Atentamente,'}
+                </div>
+                
+                <div style="margin-top: 80px;">
+                    <div style="border-top: 1px solid #333; width: 300px; text-align: center; margin: 0 auto;">
+                        <br>Firma y Sello
+                    </div>
+                </div>
+            `;
+        }
+
+        function downloadWord() {
+            if (!currentDocument) return;
+
+            const docContent = `
+SISTEMA DE GESTIÓN DOCUMENTAL - SINTEL
+
+${currentDocument.number}
+
+Samborondón, ${new Date().toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric'
+})}
+
+${currentDocument.recipient ? `Para: ${currentDocument.recipient}\n\n` : ''}
+
+Asunto: ${currentDocument.subject}
+
+${currentDocument.content || 'Estimado(a) señor(a),\n\nPor medio del presente documento...\n\nAtentamente,'}
+
+
+
+_______________________
+Firma y Sello
+            `;
+
+            const blob = new Blob([docContent], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentDocument.number.replace(/[^a-zA-Z0-9]/g, '_')}.doc`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function clearPreview() {
+            document.getElementById('documentPreview').style.display = 'none';
+            currentDocument = null;
+        }
+
+        function refreshData() {
+            loadStats();
+            loadHistory();
+            showAlert('Datos actualizados correctamente', 'success');
+        }
+
+        function setButtonLoading(buttonId, loading) {
+            const button = document.getElementById(buttonId);
+            if (loading) {
+                button.disabled = true;
+                button.innerHTML = '<div class="loading" style="width: 16px; height: 16px; display: inline-block; margin-right: 8px;"></div>Procesando...';
+            } else {
+                button.disabled = false;
+                if (buttonId === 'generateBtn') {
+                    button.innerHTML = '📄 Generar Documento';
+                } else if (buttonId === 'previewBtn') {
+                    button.innerHTML = '👁️ Ver Próximo Número';
+                }
+            }
+        }
+
+        function updateStatus(message, type) {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.textContent = message;
+            statusBar.className = 'status-bar';
+            if (type === 'error') {
+                statusBar.style.background = '#e74c3c';
+            } else {
+                statusBar.style.background = '#27ae60';
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        // Actualización automática cada 30 segundos
+        setInterval(function() {
+            loadStats();
+            loadHistory();
+        }, 30000);
+    </script>
+</body>
+</html>
+                
