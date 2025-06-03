@@ -1054,17 +1054,29 @@
         }
 
         function updateLocalStats() {
-            localStats.totalDocuments++;
+            // Agregar documento al historial local PRIMERO
+            const newDocument = {
+                id: localDocuments.length + 1,
+                document_number: currentDocument.number,
+                document_type: currentDocument.type,
+                department: currentDocument.department,
+                created_date: new Date().toISOString(),
+                status: 'Generado'
+            };
+            
+            localDocuments.push(newDocument);
+            
+            // Recalcular estadísticas basadas en el array actualizado
+            localStats.totalDocuments = localDocuments.length;
             
             // Contar documentos de hoy
             const today = new Date().toDateString();
             localStats.todayDocuments = localDocuments.filter(doc => 
-                new Date(doc.date).toDateString() === today
-            ).length + 1;
+                new Date(doc.created_date).toDateString() === today
+            ).length;
             
             // Contar departamentos activos
             const departments = new Set(localDocuments.map(doc => doc.department));
-            departments.add(currentDocument.department);
             localStats.activeDepartments = departments.size;
             
             // Actualizar interfaz
@@ -1072,19 +1084,13 @@
             document.getElementById('todayDocuments').textContent = localStats.todayDocuments;
             document.getElementById('activeDepartments').textContent = localStats.activeDepartments;
             
-            // Agregar documento al historial local
-            localDocuments.push({
-                document_number: currentDocument.number,
-                document_type: currentDocument.type,
-                department: currentDocument.department,
-                created_date: new Date().toISOString(),
-                status: 'Generado'
-            });
-            
             // Actualizar historial
             allDocuments = [...localDocuments];
             updateHistoryTable(allDocuments);
             updateHistoryInfo(allDocuments.length);
+            
+            console.log('📊 Stats actualizadas:', localStats);
+            console.log('📋 Documentos en historial:', localDocuments.length);
         }
 
         async function previewNext() {
@@ -1122,9 +1128,12 @@
 
         async function loadHistory() {
             try {
+                // Asegurar que allDocuments refleje el estado actual
                 allDocuments = [...localDocuments];
                 updateHistoryTable(allDocuments);
                 updateHistoryInfo(allDocuments.length);
+                
+                console.log('📋 Historial cargado:', allDocuments.length, 'documentos');
             } catch (error) {
                 console.error('Error cargando historial:', error);
                 document.getElementById('historyTable').innerHTML = `
@@ -1146,7 +1155,7 @@
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="6" style="text-align: center; color: #7f8c8d;">
-                            No hay documentos que coincidan con los filtros
+                            No hay documentos generados
                         </td>
                     </tr>
                 `;
@@ -1175,6 +1184,8 @@
                     ${actionsCell}
                 `;
             });
+            
+            console.log('📋 Tabla de historial actualizada con', documents.length, 'documentos');
         }
 
         // ================================
@@ -1309,9 +1320,16 @@
             if (!confirmation) return;
             
             try {
+                // Encontrar el índice real en el array original basado en el document_number
+                const realIndex = localDocuments.findIndex(doc => doc.document_number === documentNumber);
+                
+                if (realIndex === -1) {
+                    showAlert('Documento no encontrado', 'error');
+                    return;
+                }
+                
                 // Eliminar del array local
-                localDocuments.splice(documentIndex, 1);
-                allDocuments = [...localDocuments];
+                localDocuments.splice(realIndex, 1);
                 
                 // Recalcular estadísticas
                 localStats.totalDocuments = localDocuments.length;
@@ -1323,12 +1341,16 @@
                 const departments = new Set(localDocuments.map(doc => doc.department));
                 localStats.activeDepartments = departments.size;
                 
+                // Actualizar todo
+                allDocuments = [...localDocuments];
                 loadStats();
                 loadHistory();
                 loadCounters();
                 
                 showAlert(`Documento ${documentNumber} eliminado exitosamente`, 'success');
+                console.log('🗑️ Documento eliminado:', documentNumber);
             } catch (error) {
+                console.error('Error eliminando documento:', error);
                 showAlert('Error eliminando documento', 'error');
             }
         }
@@ -1632,8 +1654,10 @@
         // Actualización automática cada 30 segundos (solo si está logueado)
         setInterval(function() {
             if (currentUser) {
-                loadStats();
-                // loadHistory(); // Comentado para evitar refresh constante en modo local
+                // Solo actualizar estadísticas, NO el historial para evitar pérdida de datos
+                document.getElementById('totalDocuments').textContent = localStats.totalDocuments;
+                document.getElementById('todayDocuments').textContent = localStats.todayDocuments;
+                document.getElementById('activeDepartments').textContent = localStats.activeDepartments;
             }
         }, 30000);
 
