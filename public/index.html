@@ -649,22 +649,9 @@
                             </select>
                         </div>
 
-                        <div class="form-group">
-                            <label for="subject">Asunto del Documento *</label>
-                            <input type="text" id="subject" placeholder="Ingrese el asunto del documento" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="recipient">Destinatario</label>
-                            <input type="text" id="recipient" placeholder="Nombre del destinatario">
-                        </div>
                     </div>
 
                     <div>
-                        <div class="form-group">
-                            <label for="content">Contenido del Documento</label>
-                            <textarea id="content" rows="8" placeholder="Escriba el contenido del documento aquí..."></textarea>
-                        </div>
                     </div>
                 </div>
 
@@ -810,7 +797,6 @@
                             <th>Número</th>
                             <th>Tipo</th>
                             <th>Departamento</th>
-                            <th>Asunto</th>
                             <th>Fecha</th>
                             <th>Estado</th>
                             <th id="actionsHeader">Acciones</th>
@@ -818,7 +804,7 @@
                     </thead>
                     <tbody id="historyTable">
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 30px;">
+                            <td colspan="6" style="text-align: center; padding: 30px;">
                                 <div class="loading"></div> Cargando historial...
                             </td>
                         </tr>
@@ -1106,7 +1092,7 @@
                 console.error('Error cargando historial:', error);
                 document.getElementById('historyTable').innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #e74c3c;">
+                        <td colspan="6" style="text-align: center; color: #e74c3c;">
                             Error cargando historial
                         </td>
                     </tr>
@@ -1122,7 +1108,7 @@
             if (documents.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #7f8c8d;">
+                        <td colspan="6" style="text-align: center; color: #7f8c8d;">
                             No hay documentos que coincidan con los filtros
                         </td>
                     </tr>
@@ -1147,7 +1133,6 @@
                     <td><strong>${doc.document_number}</strong></td>
                     <td>${documentTypeName}</td>
                     <td>${doc.department}</td>
-                    <td>${doc.subject}</td>
                     <td>${date}</td>
                     <td><span class="status-indicator status-active"></span>${doc.status}</td>
                     ${actionsCell}
@@ -1418,16 +1403,6 @@
                     <strong>${doc.number}</strong>
                 </div>
                 
-                ${doc.recipient ? `<div style="margin-bottom: 20px;"><strong>Para:</strong> ${doc.recipient}</div>` : ''}
-                
-                <div style="margin-bottom: 20px;">
-                    <strong>Asunto:</strong> ${doc.subject}
-                </div>
-                
-                <div style="margin-bottom: 30px; text-align: justify; line-height: 1.6;">
-                    ${doc.content || getDefaultContent(doc.type)}
-                </div>
-                
                 <div style="margin-top: 80px;">
                     <div style="border-top: 1px solid #333; width: 300px; text-align: center; margin: 0 auto;">
                         <br>Firma y Sello
@@ -1544,9 +1519,6 @@
                 const documentData = {
                     number: doc.document_number,
                     type: doc.document_type,
-                    subject: doc.subject,
-                    recipient: doc.recipient || '',
-                    content: doc.content || '',
                     department: doc.department
                 };
 
@@ -1612,9 +1584,6 @@
                 const documentData = {
                     number: doc.document_number,
                     type: doc.document_type,
-                    subject: doc.subject,
-                    recipient: doc.recipient || '',
-                    content: doc.content || '',
                     department: doc.department
                 };
 
