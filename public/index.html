@@ -92,7 +92,6 @@
             padding: 40px;
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            display: block; /* Visible por defecto */
         }
 
         .login-header {
@@ -103,12 +102,27 @@
         .login-header h1 {
             color: #2c3e50;
             margin-bottom: 10px;
+            font-size: 2.5em;
         }
 
         .login-form {
             display: flex;
             flex-direction: column;
             gap: 20px;
+        }
+
+        .credentials-info {
+            background: #e8f4f8;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .credentials-info h4 {
+            color: #0c5460;
+            margin-bottom: 10px;
         }
 
         .main-content {
@@ -377,24 +391,35 @@
             <h1>🏢 SINTEL</h1>
             <p>Sistema de Gestión Documental</p>
         </div>
-        <form class="login-form" onsubmit="return login(event)">
+        
+        <!-- Información de credenciales -->
+        <div class="credentials-info">
+            <h4>👤 Credenciales de Prueba:</h4>
+            <p><strong>Administrador:</strong><br>
+            Usuario: admin | Contraseña: admin123</p>
+            <p><strong>Usuario Regular:</strong><br>
+            Usuario: usuario | Contraseña: usuario123</p>
+        </div>
+        
+        <div class="login-form">
             <div class="form-group">
                 <label for="username">Usuario</label>
-                <input type="text" id="username" required placeholder="Ingrese su usuario">
+                <input type="text" id="username" placeholder="Ingrese su usuario">
             </div>
             <div class="form-group">
                 <label for="password">Contraseña</label>
-                <input type="password" id="password" required placeholder="Ingrese su contraseña">
+                <input type="password" id="password" placeholder="Ingrese su contraseña">
             </div>
-            <button type="submit" class="btn">🔐 Iniciar Sesión</button>
-            <button type="button" class="btn btn-secondary" onclick="testLogin()">🧪 Login como Admin (Test)</button>
-        </form>
+            <button class="btn" onclick="doLogin()">🔐 Iniciar Sesión</button>
+            <button class="btn btn-secondary" onclick="quickLoginAdmin()">🚀 Login Rápido Admin</button>
+            <button class="btn btn-secondary" onclick="quickLoginUser()">👤 Login Rápido Usuario</button>
+        </div>
         <div id="loginAlert" class="alert alert-error" style="margin-top: 20px;">
             Usuario o contraseña incorrectos
         </div>
     </div>
 
-    <!-- Main Application Container (Initially hidden) -->
+    <!-- Main Application Container -->
     <div id="mainContainer" class="container hidden">
         <div class="header">
             <h1>🏢 SINTEL</h1>
@@ -402,7 +427,7 @@
             <div class="user-info">
                 <div><strong id="currentUser">Usuario</strong></div>
                 <div class="user-role" id="currentRole">Rol</div>
-                <button class="logout-btn" onclick="logout()">🚪 Cerrar Sesión</button>
+                <button class="logout-btn" onclick="doLogout()">🚪 Cerrar Sesión</button>
             </div>
         </div>
 
@@ -492,7 +517,7 @@
             </div>
 
             <!-- Panel de Administración (Solo para administradores) -->
-            <div id="adminPanel" class="form-section admin-section">
+            <div id="adminPanel" class="form-section admin-section hidden">
                 <h2 style="color: #e74c3c;">⚠️ Panel de Administración</h2>
                 <p style="color: #721c24; margin-bottom: 20px;">
                     <strong>Atención:</strong> Estas acciones son irreversibles. Use con precaución.
@@ -592,6 +617,7 @@
     </div>
 
     <script>
+        // Variables globales
         let currentDocument = null;
         let currentUser = null;
 
@@ -600,16 +626,16 @@
             'admin': {
                 password: 'admin123',
                 role: 'Administrador',
-                name: 'Administrador'
+                name: 'Administrador del Sistema'
             },
             'usuario': {
                 password: 'usuario123',
                 role: 'Usuario',
-                name: 'Usuario'
+                name: 'Usuario Regular'
             }
         };
 
-        // Mapeo de tipos de documento para la numeración
+        // Mapeo de tipos de documento
         const documentTypeMapping = {
             'oficio': { prefix: 'Oficio No.', name: 'Oficio' },
             'memorando': { prefix: 'Memorando No.', name: 'Memorando' },
@@ -620,481 +646,155 @@
         };
 
         // ================================
-        // FUNCIONES DE ADMINISTRACIÓN (Solo para administradores)
-        // ================================
-
-        // Confirmar eliminación de todos los documentos
-        function confirmDeleteAll() {
-            if (currentUser.role !== 'Administrador') {
-                showAlert('No tiene permisos para esta acción', 'error');
-                return;
-            }
-            
-            const confirmation = prompt(
-                '⚠️ ADVERTENCIA: Esta acción eliminará TODOS los documentos y reiniciará los contadores.\n\n' +
-                'Para confirmar, escriba exactamente: ELIMINAR TODO'
-            );
-            
-            if (confirmation === 'ELIMINAR TODO') {
-                deleteAllDocuments();
-            } else if (confirmation !== null) {
-                showAlert('Confirmación incorrecta. Operación cancelada.', 'error');
-            }
-        }
-
-        // Eliminar todos los documentos
-        async function deleteAllDocuments() {
-            if (currentUser.role !== 'Administrador') {
-                showAlert('No tiene permisos para esta acción', 'error');
-                return;
-            }
-            
-            try {
-                const result = await apiCall('/delete-all-documents', {
-                    method: 'DELETE'
-                });
-                
-                if (result.success) {
-                    showAlert(result.message, 'success');
-                    loadStats();
-                    loadHistory();
-                    loadCounters();
-                }
-            } catch (error) {
-                showAlert('Error eliminando documentos', 'error');
-            }
-        }
-
-        // Eliminar documento específico
-        async function deleteDocument(documentId, documentNumber) {
-            if (currentUser.role !== 'Administrador') {
-                showAlert('No tiene permisos para esta acción', 'error');
-                return;
-            }
-            
-            const confirmation = confirm(
-                `¿Está seguro de eliminar el documento "${documentNumber}"?\n\n` +
-                'Esta acción no se puede deshacer.'
-            );
-            
-            if (!confirmation) return;
-            
-            try {
-                const result = await apiCall(`/delete-document/${documentId}`, {
-                    method: 'DELETE'
-                });
-                
-                if (result.success) {
-                    showAlert(result.message, 'success');
-                    loadStats();
-                    loadHistory();
-                    loadCounters();
-                }
-            } catch (error) {
-                showAlert('Error eliminando documento', 'error');
-            }
-        }
-
-        // Reiniciar contadores
-        async function resetCounters() {
-            if (currentUser.role !== 'Administrador') {
-                showAlert('No tiene permisos para esta acción', 'error');
-                return;
-            }
-            
-            const department = document.getElementById('resetDepartment').value;
-            const type = document.getElementById('resetType').value;
-            
-            if (!department && !type) {
-                // Reiniciar todos los contadores
-                const confirmation = confirm(
-                    '¿Está seguro de reiniciar TODOS los contadores a 0?\n\n' +
-                    'Esta acción no se puede deshacer.'
-                );
-                
-                if (!confirmation) return;
-                
-                try {
-                    const result = await apiCall('/reset-all-counters', {
-                        method: 'POST'
-                    });
-                    
-                    if (result.success) {
-                        showAlert(result.message, 'success');
-                        loadCounters();
-                        loadStats();
-                    }
-                } catch (error) {
-                    showAlert('Error reiniciando contadores', 'error');
-                }
-            } else {
-                // Reiniciar contador específico
-                if (!department || !type) {
-                    showAlert('Para reiniciar un contador específico, seleccione tanto departamento como tipo', 'error');
-                    return;
-                }
-                
-                const confirmation = confirm(
-                    `¿Reiniciar contador ${documentTypeMapping[type]?.name || type} para ${department} ${new Date().getFullYear()}?`
-                );
-                
-                if (!confirmation) return;
-                
-                try {
-                    const result = await apiCall('/reset-counter', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            department: department,
-                            document_type: type,
-                            year: new Date().getFullYear()
-                        })
-                    });
-                    
-                    if (result.success) {
-                        showAlert(result.message, 'success');
-                        loadCounters();
-                        loadStats();
-                    }
-                } catch (error) {
-                    showAlert('Error reiniciando contador', 'error');
-                }
-            }
-        }
-
-        // Cargar estado de contadores (solo para administradores)
-        async function loadCounters() {
-            if (currentUser.role !== 'Administrador') {
-                return;
-            }
-            
-            try {
-                const counters = await apiCall('/counters');
-                updateCountersDisplay(counters);
-            } catch (error) {
-                document.getElementById('countersStatus').innerHTML = 
-                    '<div style="color: #e74c3c;">Error cargando contadores</div>';
-            }
-        }
-
-        // Actualizar display de contadores
-        function updateCountersDisplay(counters) {
-            const container = document.getElementById('countersStatus');
-            
-            if (counters.length === 0) {
-                container.innerHTML = '<div style="color: #7f8c8d;">No hay contadores creados</div>';
-                return;
-            }
-            
-            let html = '';
-            counters.forEach(counter => {
-                const className = counter.counter > 0 ? 'has-documents' : 'empty';
-                const typeName = documentTypeMapping[counter.document_type]?.name || counter.document_type;
-                html += `
-                    <div class="admin-counter ${className}">
-                        <strong>${counter.department} - ${typeName}</strong>
-                        <span style="float: right;">
-                            Año: ${counter.year} | Contador: <strong>${counter.counter}</strong>
-                        </span>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-
-        // ================================
-        // FUNCIONES DE DOCUMENTOS
-        // ================================
-
-        function createDocumentHTML(doc) {
-            const today = new Date().toLocaleDateString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-
-            // Obtener el nombre del tipo de documento
-            const documentTypeName = documentTypeMapping[doc.type]?.name || doc.type;
-
-            return `
-                <div style="text-align: right; margin-bottom: 30px;">
-                    <strong>Samborondón, ${today}</strong>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <strong>${doc.number}</strong>
-                </div>
-                
-                ${doc.recipient ? `<div style="margin-bottom: 20px;"><strong>Para:</strong> ${doc.recipient}</div>` : ''}
-                
-                <div style="margin-bottom: 20px;">
-                    <strong>Asunto:</strong> ${doc.subject}
-                </div>
-                
-                <div style="margin-bottom: 30px; text-align: justify; line-height: 1.6;">
-                    ${doc.content || getDefaultContent(doc.type)}
-                </div>
-                
-                <div style="margin-top: 80px;">
-                    <div style="border-top: 1px solid #333; width: 300px; text-align: center; margin: 0 auto;">
-                        <br>Firma y Sello
-                    </div>
-                </div>
-            `;
-        }
-
-        // Función para obtener contenido por defecto según el tipo de documento
-        function getDefaultContent(documentType) {
-            const defaultContent = {
-                'oficio': 'Estimado(a) señor(a),<br><br>Por medio del presente documento...<br><br>Atentamente,',
-                'memorando': 'Para: [Destinatario]<br>De: [Remitente]<br><br>Por medio del presente memorando...<br><br>Cordialmente,',
-                'orden_compra': 'Estimado proveedor,<br><br>Por medio de la presente, solicitamos cotización para los siguientes productos/servicios:<br><br>[Detalle de productos/servicios]<br><br>Favor enviar cotización a la brevedad posible.<br><br>Atentamente,',
-                'proforma': 'Estimado cliente,<br><br>De acuerdo a su solicitud, adjuntamos la proforma correspondiente:<br><br>[Detalle de productos/servicios]<br><br>La presente proforma tiene una validez de 30 días.<br><br>Cordialmente,',
-                'acta_entrega': 'ACTA DE ENTREGA<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se hace entrega de:<br><br>[Detalle de lo entregado]<br><br>ENTREGA: _____________________<br>RECIBE: _____________________',
-                'acta_recepcion': 'ACTA DE RECEPCIÓN<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:<br><br>[Detalle de lo recibido]<br><br>ESTADO: Conforme / No conforme<br><br>RECIBE: _____________________<br>ENTREGA: _____________________'
-            };
-            
-            return defaultContent[documentType] || 'Contenido del documento...';
-        }
-
-        function downloadWord() {
-            if (!currentDocument) return;
-
-            const documentTypeName = documentTypeMapping[currentDocument.type]?.name || currentDocument.type;
-
-            const docContent = `
-SISTEMA DE GESTIÓN DOCUMENTAL - SINTEL
-
-${currentDocument.number}
-
-Samborondón, ${new Date().toLocaleDateString('es-ES', {
-    year: 'numeric',
-    month: 'long', 
-    day: 'numeric'
-})}
-
-${currentDocument.recipient ? `Para: ${currentDocument.recipient}\n\n` : ''}
-
-Asunto: ${currentDocument.subject}
-
-${currentDocument.content || getDefaultContentPlain(currentDocument.type)}
-
-
-
-_______________________
-Firma y Sello
-            `;
-
-            const blob = new Blob([docContent], { type: 'application/msword' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${currentDocument.number.replace(/[^a-zA-Z0-9]/g, '_')}.doc`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        // Función para obtener contenido por defecto en texto plano (para descarga)
-        function getDefaultContentPlain(documentType) {
-            const defaultContent = {
-                'oficio': 'Estimado(a) señor(a),\n\nPor medio del presente documento...\n\nAtentamente,',
-                'memorando': 'Para: [Destinatario]\nDe: [Remitente]\n\nPor medio del presente memorando...\n\nCordialmente,',
-                'orden_compra': 'Estimado proveedor,\n\nPor medio de la presente, solicitamos cotización para los siguientes productos/servicios:\n\n[Detalle de productos/servicios]\n\nFavor enviar cotización a la brevedad posible.\n\nAtentamente,',
-                'proforma': 'Estimado cliente,\n\nDe acuerdo a su solicitud, adjuntamos la proforma correspondiente:\n\n[Detalle de productos/servicios]\n\nLa presente proforma tiene una validez de 30 días.\n\nCordialmente,',
-                'acta_entrega': 'ACTA DE ENTREGA\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se hace entrega de:\n\n[Detalle de lo entregado]\n\nENTREGA: _____________________\nRECIBE: _____________________',
-                'acta_recepcion': 'ACTA DE RECEPCIÓN\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:\n\n[Detalle de lo recibido]\n\nESTADO: Conforme / No conforme\n\nRECIBE: _____________________\nENTREGA: _____________________'
-            };
-            
-            return defaultContent[documentType] || 'Contenido del documento...';
-        }
-
-        function clearPreview() {
-            document.getElementById('documentPreview').style.display = 'none';
-            currentDocument = null;
-        }
-
-        function refreshData() {
-            loadStats();
-            loadHistory();
-            if (currentUser && currentUser.role === 'Administrador') {
-                loadCounters();
-            }
-            showAlert('Datos actualizados correctamente', 'success');
-        }
-
-        // ================================
-        // FUNCIONES AUXILIARES
-        // ================================
-
-        function setButtonLoading(buttonId, loading) {
-            const button = document.getElementById(buttonId);
-            if (loading) {
-                button.disabled = true;
-                button.innerHTML = '<div class="loading" style="width: 16px; height: 16px; display: inline-block; margin-right: 8px;"></div>Procesando...';
-            } else {
-                button.disabled = false;
-                if (buttonId === 'generateBtn') {
-                    button.innerHTML = '📄 Generar Documento';
-                } else if (buttonId === 'previewBtn') {
-                    button.innerHTML = '👁️ Ver Próximo Número';
-                }
-            }
-        }
-
-        function updateStatus(message, type) {
-            const statusBar = document.getElementById('statusBar');
-            statusBar.textContent = message;
-            statusBar.className = 'status-bar';
-            if (type === 'error') {
-                statusBar.style.background = '#e74c3c';
-            } else {
-                statusBar.style.background = '#27ae60';
-            }
-        }
-
-        function showAlert(message, type) {
-            const alertContainer = document.getElementById('alertContainer');
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.textContent = message;
-            alert.style.display = 'block';
-            
-            alertContainer.innerHTML = '';
-            alertContainer.appendChild(alert);
-            
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 5000);
-        }
-
-        // Actualización automática cada 30 segundos (solo si está logueado)
-        setInterval(function() {
-            if (currentUser) {
-                loadStats();
-                loadHistory();
-            }
-        }, 30000);
-    </script>
-</body>
-</html>
         // FUNCIONES DE AUTENTICACIÓN
         // ================================
 
-        function login(event) {
-            event.preventDefault();
+        function doLogin() {
+            console.log('Ejecutando login...');
             
-            console.log('Intentando login...');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
             
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            console.log('Usuario ingresado:', username);
+            console.log('Usuarios disponibles:', Object.keys(users));
             
-            console.log('Usuario:', username);
+            if (!username || !password) {
+                showLoginError('Por favor complete todos los campos');
+                return;
+            }
             
             if (users[username] && users[username].password === password) {
-                console.log('Login exitoso!');
+                console.log('✅ Login exitoso');
                 
                 currentUser = {
                     username: username,
                     ...users[username]
                 };
                 
-                // Guardar sesión
-                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                // Guardar en sessionStorage
+                try {
+                    sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    console.log('✅ Usuario guardado en sesión');
+                } catch (e) {
+                    console.error('Error guardando sesión:', e);
+                }
                 
-                // Mostrar aplicación principal
-                showMainApplication();
+                showMainApp();
+                showAlert(`¡Bienvenido, ${currentUser.name}!`, 'success');
                 
-                // Configurar permisos según el rol
-                setupUserPermissions();
-                
-                showAlert(`Bienvenido, ${currentUser.name}`, 'success');
             } else {
-                console.log('Login fallido');
-                document.getElementById('loginAlert').style.display = 'block';
-                setTimeout(() => {
-                    document.getElementById('loginAlert').style.display = 'none';
-                }, 3000);
+                console.log('❌ Login fallido');
+                showLoginError('Usuario o contraseña incorrectos');
             }
-            
-            return false;
         }
 
-        function logout() {
-            sessionStorage.removeItem('currentUser');
-            currentUser = null;
+        function quickLoginAdmin() {
+            document.getElementById('username').value = 'admin';
+            document.getElementById('password').value = 'admin123';
+            doLogin();
+        }
+
+        function quickLoginUser() {
+            document.getElementById('username').value = 'usuario';
+            document.getElementById('password').value = 'usuario123';
+            doLogin();
+        }
+
+        function doLogout() {
+            console.log('Cerrando sesión...');
             
-            // Ocultar aplicación principal y mostrar login
+            currentUser = null;
+            sessionStorage.removeItem('currentUser');
+            
+            // Mostrar login
             document.getElementById('mainContainer').classList.add('hidden');
             document.getElementById('loginContainer').classList.remove('hidden');
             
             // Limpiar formularios
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
+            
+            console.log('✅ Sesión cerrada');
         }
 
-        function checkSession() {
-            const savedUser = sessionStorage.getItem('currentUser');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                showMainApplication();
-                setupUserPermissions();
-                return true;
-            }
-            return false;
-        }
-
-        function showMainApplication() {
+        function showMainApp() {
+            console.log('Mostrando aplicación principal...');
+            
+            // Ocultar login, mostrar app
             document.getElementById('loginContainer').classList.add('hidden');
             document.getElementById('mainContainer').classList.remove('hidden');
             
-            // Actualizar información del usuario
+            // Actualizar info de usuario
             document.getElementById('currentUser').textContent = currentUser.name;
             document.getElementById('currentRole').textContent = currentUser.role;
+            
+            // Configurar permisos
+            setupPermissions();
             
             // Cargar datos
             loadStats();
             loadHistory();
-            if (currentUser.role === 'Administrador') {
-                loadCounters();
-            }
+            
+            console.log('✅ Aplicación cargada para:', currentUser.role);
         }
 
-        function setupUserPermissions() {
+        function setupPermissions() {
             const isAdmin = currentUser.role === 'Administrador';
             
-            // Mostrar/ocultar panel de administración
+            // Panel de administración
             const adminPanel = document.getElementById('adminPanel');
             if (isAdmin) {
                 adminPanel.classList.remove('hidden');
+                loadCounters();
             } else {
                 adminPanel.classList.add('hidden');
             }
             
-            // Mostrar/ocultar columna de acciones en historial
+            // Columna de acciones en historial
             const actionsHeader = document.getElementById('actionsHeader');
             if (!isAdmin) {
                 actionsHeader.style.display = 'none';
+            } else {
+                actionsHeader.style.display = 'table-cell';
             }
+            
+            console.log('✅ Permisos configurados para:', currentUser.role);
+        }
+
+        function showLoginError(message) {
+            const alert = document.getElementById('loginAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+
+        function checkSession() {
+            console.log('Verificando sesión...');
+            
+            try {
+                const savedUser = sessionStorage.getItem('currentUser');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    console.log('✅ Sesión encontrada:', currentUser.username);
+                    showMainApp();
+                    return true;
+                }
+            } catch (e) {
+                console.error('Error leyendo sesión:', e);
+                sessionStorage.removeItem('currentUser');
+            }
+            
+            console.log('ℹ️ No hay sesión activa');
+            return false;
         }
 
         // ================================
-        // FUNCIONES ORIGINALES DEL SISTEMA
+        // FUNCIONES DEL SISTEMA ORIGINAL
         // ================================
 
-        // Cargar datos al iniciar
-        window.addEventListener('load', function() {
-            checkSession();
-            
-            // Si no hay usuario logueado, mostrar login
-            if (!currentUser) {
-                document.getElementById('loginContainer').classList.remove('hidden');
-                document.getElementById('mainContainer').classList.add('hidden');
-            }
-        });
-
-        // Funciones API
         async function apiCall(endpoint, options = {}) {
             try {
                 const response = await fetch(`/api${endpoint}`, {
@@ -1114,22 +814,6 @@ Firma y Sello
                 console.error('API Error:', error);
                 updateStatus('🔴 Error de conexión', 'error');
                 throw error;
-            }
-        }
-
-        async function previewNext() {
-            try {
-                setButtonLoading('previewBtn', true);
-                const type = document.getElementById('documentType').value;
-                const department = document.getElementById('department').value;
-                
-                const data = await apiCall(`/next-number/${type}/${department}`);
-                showAlert(`Próximo número: ${data.documentNumber}`, 'success');
-                updateStatus('🟢 Sistema conectado - Base de datos activa', 'success');
-            } catch (error) {
-                showAlert('Error obteniendo próximo número', 'error');
-            } finally {
-                setButtonLoading('previewBtn', false);
             }
         }
 
@@ -1176,7 +860,7 @@ Firma y Sello
                     document.getElementById('recipient').value = '';
                     document.getElementById('content').value = '';
 
-                    // Actualizar estadísticas e historial
+                    // Actualizar datos
                     loadStats();
                     loadHistory();
                     if (currentUser.role === 'Administrador') {
@@ -1187,6 +871,22 @@ Firma y Sello
                 showAlert('Error generando documento', 'error');
             } finally {
                 setButtonLoading('generateBtn', false);
+            }
+        }
+
+        async function previewNext() {
+            try {
+                setButtonLoading('previewBtn', true);
+                const type = document.getElementById('documentType').value;
+                const department = document.getElementById('department').value;
+                
+                const data = await apiCall(`/next-number/${type}/${department}`);
+                showAlert(`Próximo número: ${data.documentNumber}`, 'success');
+                updateStatus('🟢 Sistema conectado - Base de datos activa', 'success');
+            } catch (error) {
+                showAlert('Error obteniendo próximo número', 'error');
+            } finally {
+                setButtonLoading('previewBtn', false);
             }
         }
 
@@ -1219,7 +919,7 @@ Firma y Sello
 
         function updateHistoryTable(documents) {
             const tbody = document.getElementById('historyTable');
-            const isAdmin = currentUser.role === 'Administrador';
+            const isAdmin = currentUser && currentUser.role === 'Administrador';
             
             if (documents.length === 0) {
                 tbody.innerHTML = `
@@ -1258,3 +958,386 @@ Firma y Sello
         }
 
         // ================================
+        // FUNCIONES DE ADMINISTRACIÓN
+        // ================================
+
+        function confirmDeleteAll() {
+            if (!currentUser || currentUser.role !== 'Administrador') {
+                showAlert('No tiene permisos para esta acción', 'error');
+                return;
+            }
+            
+            const confirmation = prompt(
+                '⚠️ ADVERTENCIA: Esta acción eliminará TODOS los documentos y reiniciará los contadores.\n\n' +
+                'Para confirmar, escriba exactamente: ELIMINAR TODO'
+            );
+            
+            if (confirmation === 'ELIMINAR TODO') {
+                deleteAllDocuments();
+            } else if (confirmation !== null) {
+                showAlert('Confirmación incorrecta. Operación cancelada.', 'error');
+            }
+        }
+
+        async function deleteAllDocuments() {
+            if (!currentUser || currentUser.role !== 'Administrador') {
+                showAlert('No tiene permisos para esta acción', 'error');
+                return;
+            }
+            
+            try {
+                const result = await apiCall('/delete-all-documents', {
+                    method: 'DELETE'
+                });
+                
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    loadStats();
+                    loadHistory();
+                    loadCounters();
+                }
+            } catch (error) {
+                showAlert('Error eliminando documentos', 'error');
+            }
+        }
+
+        async function deleteDocument(documentId, documentNumber) {
+            if (!currentUser || currentUser.role !== 'Administrador') {
+                showAlert('No tiene permisos para esta acción', 'error');
+                return;
+            }
+            
+            const confirmation = confirm(
+                `¿Está seguro de eliminar el documento "${documentNumber}"?\n\n` +
+                'Esta acción no se puede deshacer.'
+            );
+            
+            if (!confirmation) return;
+            
+            try {
+                const result = await apiCall(`/delete-document/${documentId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    loadStats();
+                    loadHistory();
+                    loadCounters();
+                }
+            } catch (error) {
+                showAlert('Error eliminando documento', 'error');
+            }
+        }
+
+        async function resetCounters() {
+            if (!currentUser || currentUser.role !== 'Administrador') {
+                showAlert('No tiene permisos para esta acción', 'error');
+                return;
+            }
+            
+            const department = document.getElementById('resetDepartment').value;
+            const type = document.getElementById('resetType').value;
+            
+            if (!department && !type) {
+                const confirmation = confirm(
+                    '¿Está seguro de reiniciar TODOS los contadores a 0?\n\n' +
+                    'Esta acción no se puede deshacer.'
+                );
+                
+                if (!confirmation) return;
+                
+                try {
+                    const result = await apiCall('/reset-all-counters', {
+                        method: 'POST'
+                    });
+                    
+                    if (result.success) {
+                        showAlert(result.message, 'success');
+                        loadCounters();
+                        loadStats();
+                    }
+                } catch (error) {
+                    showAlert('Error reiniciando contadores', 'error');
+                }
+            } else {
+                if (!department || !type) {
+                    showAlert('Para reiniciar un contador específico, seleccione tanto departamento como tipo', 'error');
+                    return;
+                }
+                
+                const confirmation = confirm(
+                    `¿Reiniciar contador ${documentTypeMapping[type]?.name || type} para ${department} ${new Date().getFullYear()}?`
+                );
+                
+                if (!confirmation) return;
+                
+                try {
+                    const result = await apiCall('/reset-counter', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            department: department,
+                            document_type: type,
+                            year: new Date().getFullYear()
+                        })
+                    });
+                    
+                    if (result.success) {
+                        showAlert(result.message, 'success');
+                        loadCounters();
+                        loadStats();
+                    }
+                } catch (error) {
+                    showAlert('Error reiniciando contador', 'error');
+                }
+            }
+        }
+
+        async function loadCounters() {
+            if (!currentUser || currentUser.role !== 'Administrador') {
+                return;
+            }
+            
+            try {
+                const counters = await apiCall('/counters');
+                updateCountersDisplay(counters);
+            } catch (error) {
+                document.getElementById('countersStatus').innerHTML = 
+                    '<div style="color: #e74c3c;">Error cargando contadores</div>';
+            }
+        }
+
+        function updateCountersDisplay(counters) {
+            const container = document.getElementById('countersStatus');
+            
+            if (counters.length === 0) {
+                container.innerHTML = '<div style="color: #7f8c8d;">No hay contadores creados</div>';
+                return;
+            }
+            
+            let html = '';
+            counters.forEach(counter => {
+                const className = counter.counter > 0 ? 'has-documents' : 'empty';
+                const typeName = documentTypeMapping[counter.document_type]?.name || counter.document_type;
+                html += `
+                    <div class="admin-counter ${className}">
+                        <strong>${counter.department} - ${typeName}</strong>
+                        <span style="float: right;">
+                            Año: ${counter.year} | Contador: <strong>${counter.counter}</strong>
+                        </span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // ================================
+        // FUNCIONES DE DOCUMENTOS
+        // ================================
+
+        function createDocumentHTML(doc) {
+            const today = new Date().toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            return `
+                <div style="text-align: right; margin-bottom: 30px;">
+                    <strong>Samborondón, ${today}</strong>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <strong>${doc.number}</strong>
+                </div>
+                
+                ${doc.recipient ? `<div style="margin-bottom: 20px;"><strong>Para:</strong> ${doc.recipient}</div>` : ''}
+                
+                <div style="margin-bottom: 20px;">
+                    <strong>Asunto:</strong> ${doc.subject}
+                </div>
+                
+                <div style="margin-bottom: 30px; text-align: justify; line-height: 1.6;">
+                    ${doc.content || getDefaultContent(doc.type)}
+                </div>
+                
+                <div style="margin-top: 80px;">
+                    <div style="border-top: 1px solid #333; width: 300px; text-align: center; margin: 0 auto;">
+                        <br>Firma y Sello
+                    </div>
+                </div>
+            `;
+        }
+
+        function getDefaultContent(documentType) {
+            const defaultContent = {
+                'oficio': 'Estimado(a) señor(a),<br><br>Por medio del presente documento...<br><br>Atentamente,',
+                'memorando': 'Para: [Destinatario]<br>De: [Remitente]<br><br>Por medio del presente memorando...<br><br>Cordialmente,',
+                'orden_compra': 'Estimado proveedor,<br><br>Por medio de la presente, solicitamos cotización para los siguientes productos/servicios:<br><br>[Detalle de productos/servicios]<br><br>Favor enviar cotización a la brevedad posible.<br><br>Atentamente,',
+                'proforma': 'Estimado cliente,<br><br>De acuerdo a su solicitud, adjuntamos la proforma correspondiente:<br><br>[Detalle de productos/servicios]<br><br>La presente proforma tiene una validez de 30 días.<br><br>Cordialmente,',
+                'acta_entrega': 'ACTA DE ENTREGA<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se hace entrega de:<br><br>[Detalle de lo entregado]<br><br>ENTREGA: _____________________<br>RECIBE: _____________________',
+                'acta_recepcion': 'ACTA DE RECEPCIÓN<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:<br><br>[Detalle de lo recibido]<br><br>ESTADO: Conforme / No conforme<br><br>RECIBE: _____________________<br>ENTREGA: _____________________'
+            };
+            
+            return defaultContent[documentType] || 'Contenido del documento...';
+        }
+
+        function downloadWord() {
+            if (!currentDocument) return;
+
+            const docContent = `
+SISTEMA DE GESTIÓN DOCUMENTAL - SINTEL
+
+${currentDocument.number}
+
+Samborondón, ${new Date().toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric'
+})}
+
+${currentDocument.recipient ? `Para: ${currentDocument.recipient}\n\n` : ''}
+
+Asunto: ${currentDocument.subject}
+
+${currentDocument.content || getDefaultContentPlain(currentDocument.type)}
+
+
+
+_______________________
+Firma y Sello
+            `;
+
+            const blob = new Blob([docContent], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentDocument.number.replace(/[^a-zA-Z0-9]/g, '_')}.doc`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function getDefaultContentPlain(documentType) {
+            const defaultContent = {
+                'oficio': 'Estimado(a) señor(a),\n\nPor medio del presente documento...\n\nAtentamente,',
+                'memorando': 'Para: [Destinatario]\nDe: [Remitente]\n\nPor medio del presente memorando...\n\nCordialmente,',
+                'orden_compra': 'Estimado proveedor,\n\nPor medio de la presente, solicitamos cotización para los siguientes productos/servicios:\n\n[Detalle de productos/servicios]\n\nFavor enviar cotización a la brevedad posible.\n\nAtentamente,',
+                'proforma': 'Estimado cliente,\n\nDe acuerdo a su solicitud, adjuntamos la proforma correspondiente:\n\n[Detalle de productos/servicios]\n\nLa presente proforma tiene una validez de 30 días.\n\nCordialmente,',
+                'acta_entrega': 'ACTA DE ENTREGA\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se hace entrega de:\n\n[Detalle de lo entregado]\n\nENTREGA: _____________________\nRECIBE: _____________________',
+                'acta_recepcion': 'ACTA DE RECEPCIÓN\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:\n\n[Detalle de lo recibido]\n\nESTADO: Conforme / No conforme\n\nRECIBE: _____________________\nENTREGA: _____________________'
+            };
+            
+            return defaultContent[documentType] || 'Contenido del documento...';
+        }
+
+        function clearPreview() {
+            document.getElementById('documentPreview').style.display = 'none';
+            currentDocument = null;
+        }
+
+        function refreshData() {
+            loadStats();
+            loadHistory();
+            if (currentUser && currentUser.role === 'Administrador') {
+                loadCounters();
+            }
+            showAlert('Datos actualizados correctamente', 'success');
+        }
+
+        // ================================
+        // FUNCIONES AUXILIARES
+        // ================================
+
+        function setButtonLoading(buttonId, loading) {
+            const button = document.getElementById(buttonId);
+            if (!button) return;
+            
+            if (loading) {
+                button.disabled = true;
+                button.innerHTML = '<div class="loading" style="width: 16px; height: 16px; display: inline-block; margin-right: 8px;"></div>Procesando...';
+            } else {
+                button.disabled = false;
+                if (buttonId === 'generateBtn') {
+                    button.innerHTML = '📄 Generar Documento';
+                } else if (buttonId === 'previewBtn') {
+                    button.innerHTML = '👁️ Ver Próximo Número';
+                }
+            }
+        }
+
+        function updateStatus(message, type) {
+            const statusBar = document.getElementById('statusBar');
+            if (!statusBar) return;
+            
+            statusBar.textContent = message;
+            statusBar.className = 'status-bar';
+            if (type === 'error') {
+                statusBar.style.background = '#e74c3c';
+            } else {
+                statusBar.style.background = '#27ae60';
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            if (!alertContainer) return;
+            
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        // ================================
+        // INICIALIZACIÓN
+        // ================================
+
+        window.addEventListener('load', function() {
+            console.log('🚀 Iniciando SINTEL...');
+            
+            // Verificar si hay sesión activa
+            if (!checkSession()) {
+                // No hay sesión, mostrar login
+                document.getElementById('loginContainer').classList.remove('hidden');
+                document.getElementById('mainContainer').classList.add('hidden');
+                console.log('📋 Mostrando pantalla de login');
+            }
+            
+            // Permitir login con Enter
+            document.getElementById('username').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('password').focus();
+                }
+            });
+            
+            document.getElementById('password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    doLogin();
+                }
+            });
+        });
+
+        // Actualización automática cada 30 segundos (solo si está logueado)
+        setInterval(function() {
+            if (currentUser) {
+                loadStats();
+                loadHistory();
+            }
+        }, 30000);
+
+        console.log('✅ SINTEL cargado completamente');
+    </script>
+</body>
+</html>
