@@ -648,23 +648,10 @@
                                 <option value="ADM">Administración (ADM)</option>
                             </select>
                         </div>
-
-                        <div class="form-group">
-                            <label for="subject">Asunto del Documento *</label>
-                            <input type="text" id="subject" placeholder="Ingrese el asunto del documento" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="recipient">Destinatario</label>
-                            <input type="text" id="recipient" placeholder="Nombre del destinatario">
-                        </div>
                     </div>
 
                     <div>
-                        <div class="form-group">
-                            <label for="content">Contenido del Documento</label>
-                            <textarea id="content" rows="8" placeholder="Escriba el contenido del documento aquí..."></textarea>
-                        </div>
+                        <!-- Espacio vacío - campos removidos -->
                     </div>
                 </div>
 
@@ -801,7 +788,6 @@
                             <th>Número</th>
                             <th>Tipo</th>
                             <th>Departamento</th>
-                            <th>Asunto</th>
                             <th>Fecha</th>
                             <th>Estado</th>
                             <th id="actionsHeader">Acciones</th>
@@ -809,7 +795,7 @@
                     </thead>
                     <tbody id="historyTable">
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 30px;">
+                            <td colspan="6" style="text-align: center; padding: 30px;">
                                 <div class="loading"></div> Cargando historial...
                             </td>
                         </tr>
@@ -853,6 +839,36 @@
             'acta_entrega': { prefix: 'Acta de Entrega No.', name: 'Acta de Entrega' },
             'acta_recepcion': { prefix: 'Acta de Recepción No.', name: 'Acta de Recepción' }
         };
+
+        // Simulador de contadores locales (sin backend)
+        let localCounters = {};
+        let localDocuments = [];
+        let localStats = {
+            totalDocuments: 0,
+            todayDocuments: 0,
+            activeDepartments: 0
+        };
+
+        function getLocalCounter(type, department) {
+            const year = new Date().getFullYear();
+            const key = `${type}_${department}_${year}`;
+            
+            if (!localCounters[key]) {
+                localCounters[key] = 0;
+            }
+            
+            localCounters[key]++;
+            return localCounters[key];
+        }
+
+        function generateDocumentNumber(type, department) {
+            const counter = getLocalCounter(type, department);
+            const year = new Date().getFullYear();
+            const typePrefix = documentTypeMapping[type]?.prefix || 'Documento No.';
+            
+            // Formato: Tipo No.SINTEL-DEPT-###-YYYY
+            return `${typePrefix}SINTEL-${department}-${counter.toString().padStart(3, '0')}-${year}`;
+        }
 
         // ================================
         // FUNCIONES DE AUTENTICACIÓN
@@ -989,86 +1005,86 @@
         }
 
         // ================================
-        // FUNCIONES DEL SISTEMA ORIGINAL
+        // FUNCIONES PRINCIPALES
         // ================================
-
-        async function apiCall(endpoint, options = {}) {
-            try {
-                const response = await fetch(`/api${endpoint}`, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    },
-                    ...options
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                return await response.json();
-            } catch (error) {
-                console.error('API Error:', error);
-                updateStatus('🔴 Error de conexión', 'error');
-                throw error;
-            }
-        }
 
         async function generateDocument() {
             try {
-                const subject = document.getElementById('subject').value.trim();
-                if (!subject) {
-                    showAlert('Por favor ingrese el asunto del documento', 'error');
-                    return;
-                }
-
                 setButtonLoading('generateBtn', true);
                 
-                const documentData = {
-                    type: document.getElementById('documentType').value,
-                    department: document.getElementById('department').value,
-                    subject: subject,
-                    recipient: document.getElementById('recipient').value,
-                    content: document.getElementById('content').value
+                const documentType = document.getElementById('documentType').value;
+                const department = document.getElementById('department').value;
+                
+                console.log('Generando documento:', documentType, department);
+                
+                // Simular delay de procesamiento
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const documentNumber = generateDocumentNumber(documentType, department);
+                
+                currentDocument = {
+                    type: documentType,
+                    department: department,
+                    number: documentNumber,
+                    date: new Date().toLocaleString('es-ES')
                 };
 
-                const result = await apiCall('/generate-document', {
-                    method: 'POST',
-                    body: JSON.stringify(documentData)
-                });
+                console.log('Documento generado:', currentDocument);
 
-                if (result.success) {
-                    currentDocument = {
-                        ...documentData,
-                        number: result.documentNumber,
-                        date: new Date().toLocaleString('es-ES')
-                    };
+                // Mostrar vista previa
+                document.getElementById('generatedNumber').textContent = documentNumber;
+                document.getElementById('documentContent').innerHTML = createDocumentHTML(currentDocument);
+                document.getElementById('documentPreview').style.display = 'block';
 
-                    // Mostrar vista previa
-                    document.getElementById('generatedNumber').textContent = result.documentNumber;
-                    document.getElementById('documentContent').innerHTML = createDocumentHTML(currentDocument);
-                    document.getElementById('documentPreview').style.display = 'block';
+                // DESCARGA AUTOMÁTICA DEL DOCUMENTO WORD
+                autoDownloadWord();
 
-                    showAlert(result.message, 'success');
-                    updateStatus('🟢 Documento generado exitosamente', 'success');
-                    
-                    // Limpiar formulario
-                    document.getElementById('subject').value = '';
-                    document.getElementById('recipient').value = '';
-                    document.getElementById('content').value = '';
+                showAlert(`Documento ${documentNumber} generado y descargado automáticamente`, 'success');
+                updateStatus('🟢 Documento generado y descargado exitosamente', 'success');
 
-                    // Actualizar datos
-                    loadStats();
-                    loadHistory();
-                    if (currentUser.role === 'Administrador') {
-                        loadCounters();
-                    }
-                }
+                // Actualizar estadísticas locales
+                updateLocalStats();
+                
             } catch (error) {
+                console.error('Error generando documento:', error);
                 showAlert('Error generando documento', 'error');
             } finally {
                 setButtonLoading('generateBtn', false);
             }
+        }
+
+        function updateLocalStats() {
+            localStats.totalDocuments++;
+            
+            // Contar documentos de hoy
+            const today = new Date().toDateString();
+            localStats.todayDocuments = localDocuments.filter(doc => 
+                new Date(doc.date).toDateString() === today
+            ).length + 1;
+            
+            // Contar departamentos activos
+            const departments = new Set(localDocuments.map(doc => doc.department));
+            departments.add(currentDocument.department);
+            localStats.activeDepartments = departments.size;
+            
+            // Actualizar interfaz
+            document.getElementById('totalDocuments').textContent = localStats.totalDocuments;
+            document.getElementById('todayDocuments').textContent = localStats.todayDocuments;
+            document.getElementById('activeDepartments').textContent = localStats.activeDepartments;
+            
+            // Agregar documento al historial local
+            localDocuments.push({
+                document_number: currentDocument.number,
+                document_type: currentDocument.type,
+                department: currentDocument.department,
+                created_date: new Date().toISOString(),
+                status: 'Generado'
+            });
+            
+            // Actualizar historial
+            allDocuments = [...localDocuments];
+            updateHistoryTable(allDocuments);
+            updateHistoryInfo(allDocuments.length);
         }
 
         async function previewNext() {
@@ -1077,9 +1093,15 @@
                 const type = document.getElementById('documentType').value;
                 const department = document.getElementById('department').value;
                 
-                const data = await apiCall(`/next-number/${type}/${department}`);
-                showAlert(`Próximo número: ${data.documentNumber}`, 'success');
-                updateStatus('🟢 Sistema conectado - Base de datos activa', 'success');
+                // Simular siguiente número sin incrementar contador
+                const year = new Date().getFullYear();
+                const key = `${type}_${department}_${year}`;
+                const nextCounter = (localCounters[key] || 0) + 1;
+                const typePrefix = documentTypeMapping[type]?.prefix || 'Documento No.';
+                const nextNumber = `${typePrefix}SINTEL-${department}-${nextCounter.toString().padStart(3, '0')}-${year}`;
+                
+                showAlert(`Próximo número: ${nextNumber}`, 'success');
+                updateStatus('🟢 Sistema conectado - Funcionando localmente', 'success');
             } catch (error) {
                 showAlert('Error obteniendo próximo número', 'error');
             } finally {
@@ -1089,10 +1111,10 @@
 
         async function loadStats() {
             try {
-                const stats = await apiCall('/stats');
-                document.getElementById('totalDocuments').textContent = stats.totalDocuments;
-                document.getElementById('todayDocuments').textContent = stats.todayDocuments;
-                document.getElementById('activeDepartments').textContent = stats.activeDepartments;
+                // Usar estadísticas locales
+                document.getElementById('totalDocuments').textContent = localStats.totalDocuments;
+                document.getElementById('todayDocuments').textContent = localStats.todayDocuments;
+                document.getElementById('activeDepartments').textContent = localStats.activeDepartments;
             } catch (error) {
                 console.error('Error cargando estadísticas:', error);
             }
@@ -1100,15 +1122,14 @@
 
         async function loadHistory() {
             try {
-                const documents = await apiCall('/documents');
-                allDocuments = documents; // Guardar todos los documentos
-                updateHistoryTable(documents);
-                updateHistoryInfo(documents.length);
+                allDocuments = [...localDocuments];
+                updateHistoryTable(allDocuments);
+                updateHistoryInfo(allDocuments.length);
             } catch (error) {
                 console.error('Error cargando historial:', error);
                 document.getElementById('historyTable').innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #e74c3c;">
+                        <td colspan="6" style="text-align: center; color: #e74c3c;">
                             Error cargando historial
                         </td>
                     </tr>
@@ -1124,7 +1145,7 @@
             if (documents.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #7f8c8d;">
+                        <td colspan="6" style="text-align: center; color: #7f8c8d;">
                             No hay documentos que coincidan con los filtros
                         </td>
                     </tr>
@@ -1133,14 +1154,14 @@
             }
 
             tbody.innerHTML = '';
-            documents.forEach(doc => {
+            documents.forEach((doc, index) => {
                 const row = tbody.insertRow();
                 const date = new Date(doc.created_date).toLocaleString('es-ES');
                 const documentTypeName = documentTypeMapping[doc.document_type]?.name || doc.document_type;
                 
                 const actionsCell = isAdmin ? 
                     `<td>
-                        <button class="delete-btn" onclick="deleteDocument(${doc.id}, '${doc.document_number}')">
+                        <button class="delete-btn" onclick="deleteDocument(${index}, '${doc.document_number}')">
                             🗑️ Eliminar
                         </button>
                     </td>` : '<td>-</td>';
@@ -1149,7 +1170,6 @@
                     <td><strong>${doc.document_number}</strong></td>
                     <td>${documentTypeName}</td>
                     <td>${doc.department}</td>
-                    <td>${doc.subject}</td>
                     <td>${date}</td>
                     <td><span class="status-indicator status-active"></span>${doc.status}</td>
                     ${actionsCell}
@@ -1247,29 +1267,35 @@
             }
         }
 
-        async function deleteAllDocuments() {
+        function deleteAllDocuments() {
             if (!currentUser || currentUser.role !== 'Administrador') {
                 showAlert('No tiene permisos para esta acción', 'error');
                 return;
             }
             
             try {
-                const result = await apiCall('/delete-all-documents', {
-                    method: 'DELETE'
-                });
+                // Limpiar datos locales
+                localDocuments = [];
+                allDocuments = [];
+                localCounters = {};
+                localStats = {
+                    totalDocuments: 0,
+                    todayDocuments: 0,
+                    activeDepartments: 0
+                };
                 
-                if (result.success) {
-                    showAlert(result.message, 'success');
-                    loadStats();
-                    loadHistory();
-                    loadCounters();
-                }
+                // Actualizar interfaz
+                loadStats();
+                loadHistory();
+                loadCounters();
+                
+                showAlert('Todos los documentos han sido eliminados', 'success');
             } catch (error) {
                 showAlert('Error eliminando documentos', 'error');
             }
         }
 
-        async function deleteDocument(documentId, documentNumber) {
+        function deleteDocument(documentIndex, documentNumber) {
             if (!currentUser || currentUser.role !== 'Administrador') {
                 showAlert('No tiene permisos para esta acción', 'error');
                 return;
@@ -1283,22 +1309,31 @@
             if (!confirmation) return;
             
             try {
-                const result = await apiCall(`/delete-document/${documentId}`, {
-                    method: 'DELETE'
-                });
+                // Eliminar del array local
+                localDocuments.splice(documentIndex, 1);
+                allDocuments = [...localDocuments];
                 
-                if (result.success) {
-                    showAlert(result.message, 'success');
-                    loadStats();
-                    loadHistory();
-                    loadCounters();
-                }
+                // Recalcular estadísticas
+                localStats.totalDocuments = localDocuments.length;
+                const today = new Date().toDateString();
+                localStats.todayDocuments = localDocuments.filter(doc => 
+                    new Date(doc.created_date).toDateString() === today
+                ).length;
+                
+                const departments = new Set(localDocuments.map(doc => doc.department));
+                localStats.activeDepartments = departments.size;
+                
+                loadStats();
+                loadHistory();
+                loadCounters();
+                
+                showAlert(`Documento ${documentNumber} eliminado exitosamente`, 'success');
             } catch (error) {
                 showAlert('Error eliminando documento', 'error');
             }
         }
 
-        async function resetCounters() {
+        function resetCounters() {
             if (!currentUser || currentUser.role !== 'Administrador') {
                 showAlert('No tiene permisos para esta acción', 'error');
                 return;
@@ -1316,15 +1351,9 @@
                 if (!confirmation) return;
                 
                 try {
-                    const result = await apiCall('/reset-all-counters', {
-                        method: 'POST'
-                    });
-                    
-                    if (result.success) {
-                        showAlert(result.message, 'success');
-                        loadCounters();
-                        loadStats();
-                    }
+                    localCounters = {};
+                    loadCounters();
+                    showAlert('Todos los contadores han sido reiniciados', 'success');
                 } catch (error) {
                     showAlert('Error reiniciando contadores', 'error');
                 }
@@ -1341,33 +1370,35 @@
                 if (!confirmation) return;
                 
                 try {
-                    const result = await apiCall('/reset-counter', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            department: department,
-                            document_type: type,
-                            year: new Date().getFullYear()
-                        })
-                    });
+                    const year = new Date().getFullYear();
+                    const key = `${type}_${department}_${year}`;
+                    localCounters[key] = 0;
                     
-                    if (result.success) {
-                        showAlert(result.message, 'success');
-                        loadCounters();
-                        loadStats();
-                    }
+                    loadCounters();
+                    showAlert(`Contador reiniciado para ${documentTypeMapping[type]?.name || type} - ${department}`, 'success');
                 } catch (error) {
                     showAlert('Error reiniciando contador', 'error');
                 }
             }
         }
 
-        async function loadCounters() {
+        function loadCounters() {
             if (!currentUser || currentUser.role !== 'Administrador') {
                 return;
             }
             
             try {
-                const counters = await apiCall('/counters');
+                const counters = [];
+                Object.keys(localCounters).forEach(key => {
+                    const [type, department, year] = key.split('_');
+                    counters.push({
+                        document_type: type,
+                        department: department,
+                        year: parseInt(year),
+                        counter: localCounters[key]
+                    });
+                });
+                
                 updateCountersDisplay(counters);
             } catch (error) {
                 document.getElementById('countersStatus').innerHTML = 
@@ -1420,16 +1451,6 @@
                     <strong>${doc.number}</strong>
                 </div>
                 
-                ${doc.recipient ? `<div style="margin-bottom: 20px;"><strong>Para:</strong> ${doc.recipient}</div>` : ''}
-                
-                <div style="margin-bottom: 20px;">
-                    <strong>Asunto:</strong> ${doc.subject}
-                </div>
-                
-                <div style="margin-bottom: 30px; text-align: justify; line-height: 1.6;">
-                    ${doc.content || getDefaultContent(doc.type)}
-                </div>
-                
                 <div style="margin-top: 80px;">
                     <div style="border-top: 1px solid #333; width: 300px; text-align: center; margin: 0 auto;">
                         <br>Firma y Sello
@@ -1438,67 +1459,77 @@
             `;
         }
 
-        function getDefaultContent(documentType) {
-            const defaultContent = {
-                'oficio': 'Estimado(a) señor(a),<br><br>Por medio del presente documento...<br><br>Atentamente,',
-                'memorando': 'Para: [Destinatario]<br>De: [Remitente]<br><br>Por medio del presente memorando...<br><br>Cordialmente,',
-                'orden_compra': 'Estimado proveedor,<br><br>Por medio de la presente, solicitamos cotización para los siguientes productos/servicios:<br><br>[Detalle de productos/servicios]<br><br>Favor enviar cotización a la brevedad posible.<br><br>Atentamente,',
-                'proforma': 'Estimado cliente,<br><br>De acuerdo a su solicitud, adjuntamos la proforma correspondiente:<br><br>[Detalle de productos/servicios]<br><br>La presente proforma tiene una validez de 30 días.<br><br>Cordialmente,',
-                'acta_entrega': 'ACTA DE ENTREGA<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se hace entrega de:<br><br>[Detalle de lo entregado]<br><br>ENTREGA: _____________________<br>RECIBE: _____________________',
-                'acta_recepcion': 'ACTA DE RECEPCIÓN<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:<br><br>[Detalle de lo recibido]<br><br>ESTADO: Conforme / No conforme<br><br>RECIBE: _____________________<br>ENTREGA: _____________________'
-            };
-            
-            return defaultContent[documentType] || 'Contenido del documento...';
-        }
-
-        function downloadWord() {
-            if (!currentDocument) return;
-
-            const docContent = `
-SISTEMA DE GESTIÓN DOCUMENTAL - SINTEL
-
-${currentDocument.number}
-
-Samborondón, ${new Date().toLocaleDateString('es-ES', {
+        function createWordContent(doc) {
+            // Crear contenido en formato RTF (Rich Text Format) que Word reconoce nativamente
+            const rtfContent = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}
+\\f0\\fs24
+\\qc\\b SISTEMA DE GESTIÓN DOCUMENTAL - SINTEL\\b0\\par
+\\par
+\\ql\\b ${doc.number}\\b0\\par
+\\par
+\\qr Samborondón, ${new Date().toLocaleDateString('es-ES', {
     year: 'numeric',
     month: 'long', 
     day: 'numeric'
-})}
+})}\\par
+\\par
+\\par
+\\par
+\\par
+\\par
+\\qc _______________________\\par
+\\qc Firma y Sello\\par
+}`;
 
-${currentDocument.recipient ? `Para: ${currentDocument.recipient}\n\n` : ''}
+            return rtfContent;
+        }
 
-Asunto: ${currentDocument.subject}
+        function generateFileName(doc) {
+            // Crear nombre de archivo limpio con extensión .rtf
+            const cleanNumber = doc.number.replace(/[^a-zA-Z0-9\-]/g, '_');
+            const documentTypeName = documentTypeMapping[doc.type]?.name || doc.type;
+            const cleanType = documentTypeName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+            return `${cleanNumber}_${cleanType}.rtf`;
+        }
 
-${currentDocument.content || getDefaultContentPlain(currentDocument.type)}
-
-
-
-_______________________
-Firma y Sello
-            `;
-
-            const blob = new Blob([docContent], { type: 'application/msword' });
+        function downloadFile(content, fileName, mimeType) {
+            // Usar MIME type específico para RTF
+            const actualMimeType = fileName.endsWith('.rtf') ? 'application/rtf' : mimeType;
+            const blob = new Blob([content], { type: actualMimeType });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${currentDocument.number.replace(/[^a-zA-Z0-9]/g, '_')}.doc`;
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
 
-        function getDefaultContentPlain(documentType) {
-            const defaultContent = {
-                'oficio': 'Estimado(a) señor(a),\n\nPor medio del presente documento...\n\nAtentamente,',
-                'memorando': 'Para: [Destinatario]\nDe: [Remitente]\n\nPor medio del presente memorando...\n\nCordialmente,',
-                'orden_compra': 'Estimado proveedor,\n\nPor medio de la presente, solicitamos cotización para los siguientes productos/servicios:\n\n[Detalle de productos/servicios]\n\nFavor enviar cotización a la brevedad posible.\n\nAtentamente,',
-                'proforma': 'Estimado cliente,\n\nDe acuerdo a su solicitud, adjuntamos la proforma correspondiente:\n\n[Detalle de productos/servicios]\n\nLa presente proforma tiene una validez de 30 días.\n\nCordialmente,',
-                'acta_entrega': 'ACTA DE ENTREGA\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se hace entrega de:\n\n[Detalle de lo entregado]\n\nENTREGA: _____________________\nRECIBE: _____________________',
-                'acta_recepcion': 'ACTA DE RECEPCIÓN\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:\n\n[Detalle de lo recibido]\n\nESTADO: Conforme / No conforme\n\nRECIBE: _____________________\nENTREGA: _____________________'
-            };
+        // Función de descarga automática al generar documento
+        function autoDownloadWord() {
+            if (!currentDocument) return;
+
+            const docContent = createWordContent(currentDocument);
+            const fileName = generateFileName(currentDocument);
             
-            return defaultContent[documentType] || 'Contenido del documento...';
+            // Agregar timestamp para evitar conflictos de nombres
+            const timestamp = new Date().toISOString().slice(0,19).replace(/[T:]/g, '_');
+            const uniqueFileName = fileName.replace('.rtf', `_${timestamp}.rtf`);
+            
+            downloadFile(docContent, uniqueFileName, 'application/rtf');
+            
+            console.log(`✅ Documento Word generado automáticamente: ${uniqueFileName}`);
+        }
+
+        function downloadWord() {
+            if (!currentDocument) return;
+
+            const docContent = createWordContent(currentDocument);
+            const fileName = generateFileName(currentDocument);
+            
+            downloadFile(docContent, fileName, 'application/rtf');
+            showAlert(`Documento ${fileName} descargado exitosamente`, 'success');
         }
 
         function clearPreview() {
@@ -1602,7 +1633,7 @@ Firma y Sello
         setInterval(function() {
             if (currentUser) {
                 loadStats();
-                loadHistory();
+                // loadHistory(); // Comentado para evitar refresh constante en modo local
             }
         }, 30000);
 
