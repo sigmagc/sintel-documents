@@ -32,6 +32,7 @@
             color: white;
             padding: 30px;
             text-align: center;
+            position: relative;
         }
 
         .header h1 {
@@ -45,12 +46,68 @@
             opacity: 0.9;
         }
 
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            text-align: right;
+            background: rgba(0,0,0,0.2);
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+
+        .user-role {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .logout-btn {
+            background: rgba(231, 76, 60, 0.8);
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+
+        .logout-btn:hover {
+            background: rgba(231, 76, 60, 1);
+        }
+
         .status-bar {
             background: #27ae60;
             color: white;
             padding: 10px;
             text-align: center;
             font-weight: bold;
+        }
+
+        /* Login Form Styles */
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
         .main-content {
@@ -291,6 +348,10 @@
             background: #c0392b;
         }
 
+        .hidden {
+            display: none !important;
+        }
+
         @media (max-width: 768px) {
             .row {
                 grid-template-columns: 1fr;
@@ -299,14 +360,48 @@
             .stats-grid {
                 grid-template-columns: 1fr;
             }
+
+            .user-info {
+                position: static;
+                text-align: center;
+                margin-top: 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Login Container -->
+    <div id="loginContainer" class="login-container">
+        <div class="login-header">
+            <h1>🏢 SINTEL</h1>
+            <p>Sistema de Gestión Documental</p>
+        </div>
+        <form class="login-form" onsubmit="login(event)">
+            <div class="form-group">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" required placeholder="Ingrese su usuario">
+            </div>
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" required placeholder="Ingrese su contraseña">
+            </div>
+            <button type="submit" class="btn">🔐 Iniciar Sesión</button>
+        </form>
+        <div id="loginAlert" class="alert alert-error" style="margin-top: 20px;">
+            Usuario o contraseña incorrectos
+        </div>
+    </div>
+
+    <!-- Main Application Container -->
+    <div id="mainContainer" class="container hidden">
         <div class="header">
             <h1>🏢 SINTEL</h1>
             <p>Sistema de Gestión Documental</p>
+            <div class="user-info">
+                <div><strong id="currentUser">Usuario</strong></div>
+                <div class="user-role" id="currentRole">Rol</div>
+                <button class="logout-btn" onclick="logout()">🚪 Cerrar Sesión</button>
+            </div>
         </div>
 
         <div class="status-bar" id="statusBar">
@@ -394,8 +489,8 @@
                 </button>
             </div>
 
-            <!-- Panel de Administración -->
-            <div class="form-section admin-section">
+            <!-- Panel de Administración (Solo para administradores) -->
+            <div id="adminPanel" class="form-section admin-section">
                 <h2 style="color: #e74c3c;">⚠️ Panel de Administración</h2>
                 <p style="color: #721c24; margin-bottom: 20px;">
                     <strong>Atención:</strong> Estas acciones son irreversibles. Use con precaución.
@@ -479,7 +574,7 @@
                             <th>Asunto</th>
                             <th>Fecha</th>
                             <th>Estado</th>
-                            <th>Acciones</th>
+                            <th id="actionsHeader">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="historyTable">
@@ -496,6 +591,21 @@
 
     <script>
         let currentDocument = null;
+        let currentUser = null;
+
+        // Usuarios del sistema
+        const users = {
+            'admin': {
+                password: 'admin123',
+                role: 'Administrador',
+                name: 'Administrador'
+            },
+            'usuario': {
+                password: 'usuario123',
+                role: 'Usuario',
+                name: 'Usuario'
+            }
+        };
 
         // Mapeo de tipos de documento para la numeración
         const documentTypeMapping = {
@@ -507,177 +617,17 @@
             'acta_recepcion': { prefix: 'Acta de Recepción No.', name: 'Acta de Recepción' }
         };
 
-        // Cargar datos al iniciar
-        window.addEventListener('load', function() {
-            loadStats();
-            loadHistory();
-            loadCounters();
-            showAlert('Sistema iniciado correctamente - Conectado a base de datos PostgreSQL', 'success');
-        });
-
-        // Funciones API
-        async function apiCall(endpoint, options = {}) {
-            try {
-                const response = await fetch(`/api${endpoint}`, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    },
-                    ...options
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                return await response.json();
-            } catch (error) {
-                console.error('API Error:', error);
-                updateStatus('🔴 Error de conexión', 'error');
-                throw error;
-            }
-        }
-
-        async function previewNext() {
-            try {
-                setButtonLoading('previewBtn', true);
-                const type = document.getElementById('documentType').value;
-                const department = document.getElementById('department').value;
-                
-                const data = await apiCall(`/next-number/${type}/${department}`);
-                showAlert(`Próximo número: ${data.documentNumber}`, 'success');
-                updateStatus('🟢 Sistema conectado - Base de datos activa', 'success');
-            } catch (error) {
-                showAlert('Error obteniendo próximo número', 'error');
-            } finally {
-                setButtonLoading('previewBtn', false);
-            }
-        }
-
-        async function generateDocument() {
-            try {
-                const subject = document.getElementById('subject').value.trim();
-                if (!subject) {
-                    showAlert('Por favor ingrese el asunto del documento', 'error');
-                    return;
-                }
-
-                setButtonLoading('generateBtn', true);
-                
-                const documentData = {
-                    type: document.getElementById('documentType').value,
-                    department: document.getElementById('department').value,
-                    subject: subject,
-                    recipient: document.getElementById('recipient').value,
-                    content: document.getElementById('content').value
-                };
-
-                const result = await apiCall('/generate-document', {
-                    method: 'POST',
-                    body: JSON.stringify(documentData)
-                });
-
-                if (result.success) {
-                    currentDocument = {
-                        ...documentData,
-                        number: result.documentNumber,
-                        date: new Date().toLocaleString('es-ES')
-                    };
-
-                    // Mostrar vista previa
-                    document.getElementById('generatedNumber').textContent = result.documentNumber;
-                    document.getElementById('documentContent').innerHTML = createDocumentHTML(currentDocument);
-                    document.getElementById('documentPreview').style.display = 'block';
-
-                    showAlert(result.message, 'success');
-                    updateStatus('🟢 Documento generado exitosamente', 'success');
-                    
-                    // Limpiar formulario
-                    document.getElementById('subject').value = '';
-                    document.getElementById('recipient').value = '';
-                    document.getElementById('content').value = '';
-
-                    // Actualizar estadísticas e historial
-                    loadStats();
-                    loadHistory();
-                    loadCounters();
-                }
-            } catch (error) {
-                showAlert('Error generando documento', 'error');
-            } finally {
-                setButtonLoading('generateBtn', false);
-            }
-        }
-
-        async function loadStats() {
-            try {
-                const stats = await apiCall('/stats');
-                document.getElementById('totalDocuments').textContent = stats.totalDocuments;
-                document.getElementById('todayDocuments').textContent = stats.todayDocuments;
-                document.getElementById('activeDepartments').textContent = stats.activeDepartments;
-            } catch (error) {
-                console.error('Error cargando estadísticas:', error);
-            }
-        }
-
-        async function loadHistory() {
-            try {
-                const documents = await apiCall('/documents');
-                updateHistoryTable(documents);
-            } catch (error) {
-                console.error('Error cargando historial:', error);
-                document.getElementById('historyTable').innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align: center; color: #e74c3c;">
-                            Error cargando historial
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-
-        function updateHistoryTable(documents) {
-            const tbody = document.getElementById('historyTable');
-            
-            if (documents.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align: center; color: #7f8c8d;">
-                            No hay documentos generados aún
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            tbody.innerHTML = '';
-            documents.forEach(doc => {
-                const row = tbody.insertRow();
-                const date = new Date(doc.created_date).toLocaleString('es-ES');
-                const documentTypeName = documentTypeMapping[doc.document_type]?.name || doc.document_type;
-                
-                row.innerHTML = `
-                    <td><strong>${doc.document_number}</strong></td>
-                    <td>${documentTypeName}</td>
-                    <td>${doc.department}</td>
-                    <td>${doc.subject}</td>
-                    <td>${date}</td>
-                    <td><span class="status-indicator status-active"></span>${doc.status}</td>
-                    <td>
-                        <button class="delete-btn" onclick="deleteDocument(${doc.id}, '${doc.document_number}')">
-                            🗑️ Eliminar
-                        </button>
-                    </td>
-                `;
-            });
-        }
-
         // ================================
-        // FUNCIONES DE ADMINISTRACIÓN
+        // FUNCIONES DE ADMINISTRACIÓN (Solo para administradores)
         // ================================
 
         // Confirmar eliminación de todos los documentos
         function confirmDeleteAll() {
+            if (currentUser.role !== 'Administrador') {
+                showAlert('No tiene permisos para esta acción', 'error');
+                return;
+            }
+            
             const confirmation = prompt(
                 '⚠️ ADVERTENCIA: Esta acción eliminará TODOS los documentos y reiniciará los contadores.\n\n' +
                 'Para confirmar, escriba exactamente: ELIMINAR TODO'
@@ -692,6 +642,11 @@
 
         // Eliminar todos los documentos
         async function deleteAllDocuments() {
+            if (currentUser.role !== 'Administrador') {
+                showAlert('No tiene permisos para esta acción', 'error');
+                return;
+            }
+            
             try {
                 const result = await apiCall('/delete-all-documents', {
                     method: 'DELETE'
@@ -710,6 +665,11 @@
 
         // Eliminar documento específico
         async function deleteDocument(documentId, documentNumber) {
+            if (currentUser.role !== 'Administrador') {
+                showAlert('No tiene permisos para esta acción', 'error');
+                return;
+            }
+            
             const confirmation = confirm(
                 `¿Está seguro de eliminar el documento "${documentNumber}"?\n\n` +
                 'Esta acción no se puede deshacer.'
@@ -735,6 +695,11 @@
 
         // Reiniciar contadores
         async function resetCounters() {
+            if (currentUser.role !== 'Administrador') {
+                showAlert('No tiene permisos para esta acción', 'error');
+                return;
+            }
+            
             const department = document.getElementById('resetDepartment').value;
             const type = document.getElementById('resetType').value;
             
@@ -794,8 +759,12 @@
             }
         }
 
-        // Cargar estado de contadores
+        // Cargar estado de contadores (solo para administradores)
         async function loadCounters() {
+            if (currentUser.role !== 'Administrador') {
+                return;
+            }
+            
             try {
                 const counters = await apiCall('/counters');
                 updateCountersDisplay(counters);
@@ -830,6 +799,10 @@
             
             container.innerHTML = html;
         }
+
+        // ================================
+        // FUNCIONES DE DOCUMENTOS
+        // ================================
 
         function createDocumentHTML(doc) {
             const today = new Date().toLocaleDateString('es-ES', {
@@ -943,9 +916,15 @@ Firma y Sello
         function refreshData() {
             loadStats();
             loadHistory();
-            loadCounters();
+            if (currentUser && currentUser.role === 'Administrador') {
+                loadCounters();
+            }
             showAlert('Datos actualizados correctamente', 'success');
         }
+
+        // ================================
+        // FUNCIONES AUXILIARES
+        // ================================
 
         function setButtonLoading(buttonId, loading) {
             const button = document.getElementById(buttonId);
@@ -988,11 +967,275 @@ Firma y Sello
             }, 5000);
         }
 
-        // Actualización automática cada 30 segundos
+        // Actualización automática cada 30 segundos (solo si está logueado)
         setInterval(function() {
-            loadStats();
-            loadHistory();
+            if (currentUser) {
+                loadStats();
+                loadHistory();
+            }
         }, 30000);
     </script>
 </body>
 </html>
+        // FUNCIONES DE AUTENTICACIÓN
+        // ================================
+
+        function login(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (users[username] && users[username].password === password) {
+                currentUser = {
+                    username: username,
+                    ...users[username]
+                };
+                
+                // Guardar sesión
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                // Mostrar aplicación principal
+                showMainApplication();
+                
+                // Configurar permisos según el rol
+                setupUserPermissions();
+                
+                showAlert(`Bienvenido, ${currentUser.name}`, 'success');
+            } else {
+                document.getElementById('loginAlert').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('loginAlert').style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('currentUser');
+            currentUser = null;
+            
+            // Ocultar aplicación principal y mostrar login
+            document.getElementById('mainContainer').classList.add('hidden');
+            document.getElementById('loginContainer').classList.remove('hidden');
+            
+            // Limpiar formularios
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        function checkSession() {
+            const savedUser = sessionStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showMainApplication();
+                setupUserPermissions();
+            }
+        }
+
+        function showMainApplication() {
+            document.getElementById('loginContainer').classList.add('hidden');
+            document.getElementById('mainContainer').classList.remove('hidden');
+            
+            // Actualizar información del usuario
+            document.getElementById('currentUser').textContent = currentUser.name;
+            document.getElementById('currentRole').textContent = currentUser.role;
+            
+            // Cargar datos
+            loadStats();
+            loadHistory();
+            if (currentUser.role === 'Administrador') {
+                loadCounters();
+            }
+        }
+
+        function setupUserPermissions() {
+            const isAdmin = currentUser.role === 'Administrador';
+            
+            // Mostrar/ocultar panel de administración
+            const adminPanel = document.getElementById('adminPanel');
+            if (isAdmin) {
+                adminPanel.classList.remove('hidden');
+            } else {
+                adminPanel.classList.add('hidden');
+            }
+            
+            // Mostrar/ocultar columna de acciones en historial
+            const actionsHeader = document.getElementById('actionsHeader');
+            if (!isAdmin) {
+                actionsHeader.style.display = 'none';
+            }
+        }
+
+        // ================================
+        // FUNCIONES ORIGINALES DEL SISTEMA
+        // ================================
+
+        // Cargar datos al iniciar
+        window.addEventListener('load', function() {
+            checkSession();
+        });
+
+        // Funciones API
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`/api${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                updateStatus('🔴 Error de conexión', 'error');
+                throw error;
+            }
+        }
+
+        async function previewNext() {
+            try {
+                setButtonLoading('previewBtn', true);
+                const type = document.getElementById('documentType').value;
+                const department = document.getElementById('department').value;
+                
+                const data = await apiCall(`/next-number/${type}/${department}`);
+                showAlert(`Próximo número: ${data.documentNumber}`, 'success');
+                updateStatus('🟢 Sistema conectado - Base de datos activa', 'success');
+            } catch (error) {
+                showAlert('Error obteniendo próximo número', 'error');
+            } finally {
+                setButtonLoading('previewBtn', false);
+            }
+        }
+
+        async function generateDocument() {
+            try {
+                const subject = document.getElementById('subject').value.trim();
+                if (!subject) {
+                    showAlert('Por favor ingrese el asunto del documento', 'error');
+                    return;
+                }
+
+                setButtonLoading('generateBtn', true);
+                
+                const documentData = {
+                    type: document.getElementById('documentType').value,
+                    department: document.getElementById('department').value,
+                    subject: subject,
+                    recipient: document.getElementById('recipient').value,
+                    content: document.getElementById('content').value
+                };
+
+                const result = await apiCall('/generate-document', {
+                    method: 'POST',
+                    body: JSON.stringify(documentData)
+                });
+
+                if (result.success) {
+                    currentDocument = {
+                        ...documentData,
+                        number: result.documentNumber,
+                        date: new Date().toLocaleString('es-ES')
+                    };
+
+                    // Mostrar vista previa
+                    document.getElementById('generatedNumber').textContent = result.documentNumber;
+                    document.getElementById('documentContent').innerHTML = createDocumentHTML(currentDocument);
+                    document.getElementById('documentPreview').style.display = 'block';
+
+                    showAlert(result.message, 'success');
+                    updateStatus('🟢 Documento generado exitosamente', 'success');
+                    
+                    // Limpiar formulario
+                    document.getElementById('subject').value = '';
+                    document.getElementById('recipient').value = '';
+                    document.getElementById('content').value = '';
+
+                    // Actualizar estadísticas e historial
+                    loadStats();
+                    loadHistory();
+                    if (currentUser.role === 'Administrador') {
+                        loadCounters();
+                    }
+                }
+            } catch (error) {
+                showAlert('Error generando documento', 'error');
+            } finally {
+                setButtonLoading('generateBtn', false);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const stats = await apiCall('/stats');
+                document.getElementById('totalDocuments').textContent = stats.totalDocuments;
+                document.getElementById('todayDocuments').textContent = stats.todayDocuments;
+                document.getElementById('activeDepartments').textContent = stats.activeDepartments;
+            } catch (error) {
+                console.error('Error cargando estadísticas:', error);
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const documents = await apiCall('/documents');
+                updateHistoryTable(documents);
+            } catch (error) {
+                console.error('Error cargando historial:', error);
+                document.getElementById('historyTable').innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #e74c3c;">
+                            Error cargando historial
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function updateHistoryTable(documents) {
+            const tbody = document.getElementById('historyTable');
+            const isAdmin = currentUser.role === 'Administrador';
+            
+            if (documents.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #7f8c8d;">
+                            No hay documentos generados aún
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            documents.forEach(doc => {
+                const row = tbody.insertRow();
+                const date = new Date(doc.created_date).toLocaleString('es-ES');
+                const documentTypeName = documentTypeMapping[doc.document_type]?.name || doc.document_type;
+                
+                const actionsCell = isAdmin ? 
+                    `<td>
+                        <button class="delete-btn" onclick="deleteDocument(${doc.id}, '${doc.document_number}')">
+                            🗑️ Eliminar
+                        </button>
+                    </td>` : '<td>-</td>';
+                
+                row.innerHTML = `
+                    <td><strong>${doc.document_number}</strong></td>
+                    <td>${documentTypeName}</td>
+                    <td>${doc.department}</td>
+                    <td>${doc.subject}</td>
+                    <td>${date}</td>
+                    <td><span class="status-indicator status-active"></span>${doc.status}</td>
+                    ${actionsCell}
+                `;
+            });
+        }
+
+        // ================================
