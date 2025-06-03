@@ -739,6 +739,14 @@
                         <button class="btn btn-secondary" onclick="loadCounters()">
                             🔄 Actualizar Estado
                         </button>
+                        
+                        <h3>📁 Exportar Documentos</h3>
+                        <button class="btn" onclick="downloadAllDocuments()">
+                            📁 Descargar Todos los Documentos
+                        </button>
+                        <button class="btn btn-secondary" onclick="downloadFilteredDocuments()">
+                            📄 Descargar Documentos Filtrados
+                        </button>
                     </div>
                 </div>
             </div>
@@ -793,6 +801,7 @@
                     </div>
                     <button class="btn btn-secondary" onclick="clearFilters()">🗑️ Limpiar Filtros</button>
                     <button class="btn btn-secondary" onclick="loadHistory()">🔄 Actualizar Historial</button>
+                    <button class="btn" onclick="downloadAllDocuments()">📁 Descargar Todos los Documentos</button>
                 </div>
 
                 <table class="history-table">
@@ -1454,10 +1463,18 @@
         function downloadWord() {
             if (!currentDocument) return;
 
-            const docContent = `
+            const docContent = createWordContent(currentDocument);
+            const fileName = generateFileName(currentDocument);
+            
+            downloadFile(docContent, fileName, 'application/msword');
+            showAlert(`Documento ${fileName} descargado exitosamente`, 'success');
+        }
+
+        function createWordContent(doc) {
+            return `
 SISTEMA DE GESTIÓN DOCUMENTAL - SINTEL
 
-${currentDocument.number}
+${doc.number}
 
 Samborondón, ${new Date().toLocaleDateString('es-ES', {
     year: 'numeric',
@@ -1465,27 +1482,143 @@ Samborondón, ${new Date().toLocaleDateString('es-ES', {
     day: 'numeric'
 })}
 
-${currentDocument.recipient ? `Para: ${currentDocument.recipient}\n\n` : ''}
+${doc.recipient ? `Para: ${doc.recipient}\n\n` : ''}
 
-Asunto: ${currentDocument.subject}
+Asunto: ${doc.subject}
 
-${currentDocument.content || getDefaultContentPlain(currentDocument.type)}
+${doc.content || getDefaultContentPlain(doc.type)}
 
 
 
 _______________________
 Firma y Sello
             `;
+        }
 
-            const blob = new Blob([docContent], { type: 'application/msword' });
+        function generateFileName(doc) {
+            // Crear nombre de archivo limpio
+            const cleanNumber = doc.number.replace(/[^a-zA-Z0-9\-]/g, '_');
+            const cleanSubject = doc.subject.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+            return `${cleanNumber}_${cleanSubject}.doc`;
+        }
+
+        function downloadFile(content, fileName, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${currentDocument.number.replace(/[^a-zA-Z0-9]/g, '_')}.doc`;
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+
+        // Función para descargar todos los documentos
+        async function downloadAllDocuments() {
+            if (!allDocuments || allDocuments.length === 0) {
+                showAlert('No hay documentos para descargar. Cargue el historial primero.', 'error');
+                return;
+            }
+
+            const confirmation = confirm(
+                `¿Desea descargar todos los ${allDocuments.length} documentos?\n\n` +
+                'Se crearán archivos individuales para cada documento.'
+            );
+
+            if (!confirmation) return;
+
+            showAlert('Iniciando descarga masiva de documentos...', 'success');
+            
+            // Agregar delay entre descargas para evitar problemas del navegador
+            for (let i = 0; i < allDocuments.length; i++) {
+                const doc = allDocuments[i];
+                const documentData = {
+                    number: doc.document_number,
+                    type: doc.document_type,
+                    subject: doc.subject,
+                    recipient: doc.recipient || '',
+                    content: doc.content || '',
+                    department: doc.department
+                };
+
+                const wordContent = createWordContent(documentData);
+                const fileName = generateFileName(documentData);
+                
+                // Pequeño delay para evitar saturar el navegador
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                downloadFile(wordContent, fileName, 'application/msword');
+            }
+
+            showAlert(`✅ Descarga completada: ${allDocuments.length} documentos descargados`, 'success');
+        }
+
+        // Función para descargar documentos filtrados
+        async function downloadFilteredDocuments() {
+            const typeFilter = document.getElementById('filterType').value;
+            const departmentFilter = document.getElementById('filterDepartment').value;
+            
+            let filteredDocuments = allDocuments;
+            
+            // Aplicar filtros
+            if (typeFilter) {
+                filteredDocuments = filteredDocuments.filter(doc => 
+                    doc.document_type === typeFilter
+                );
+            }
+            
+            if (departmentFilter) {
+                filteredDocuments = filteredDocuments.filter(doc => 
+                    doc.department === departmentFilter
+                );
+            }
+
+            if (filteredDocuments.length === 0) {
+                showAlert('No hay documentos que coincidan con los filtros aplicados.', 'error');
+                return;
+            }
+
+            const filterDescription = [];
+            if (typeFilter) {
+                const typeName = documentTypeMapping[typeFilter]?.name || typeFilter;
+                filterDescription.push(`Tipo: ${typeName}`);
+            }
+            if (departmentFilter) {
+                filterDescription.push(`Departamento: ${departmentFilter}`);
+            }
+
+            const confirmation = confirm(
+                `¿Desea descargar ${filteredDocuments.length} documentos filtrados?\n\n` +
+                `Filtros: ${filterDescription.join(', ')}\n\n` +
+                'Se crearán archivos individuales para cada documento.'
+            );
+
+            if (!confirmation) return;
+
+            showAlert(`Iniciando descarga de ${filteredDocuments.length} documentos filtrados...`, 'success');
+            
+            // Descargar documentos filtrados
+            for (let i = 0; i < filteredDocuments.length; i++) {
+                const doc = filteredDocuments[i];
+                const documentData = {
+                    number: doc.document_number,
+                    type: doc.document_type,
+                    subject: doc.subject,
+                    recipient: doc.recipient || '',
+                    content: doc.content || '',
+                    department: doc.department
+                };
+
+                const wordContent = createWordContent(documentData);
+                const fileName = generateFileName(documentData);
+                
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                downloadFile(wordContent, fileName, 'application/msword');
+            }
+
+            showAlert(`✅ Descarga filtrada completada: ${filteredDocuments.length} documentos descargados`, 'success');
         }
 
         function getDefaultContentPlain(documentType) {
