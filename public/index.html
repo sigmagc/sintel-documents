@@ -118,6 +118,7 @@
             padding: 15px;
             margin-bottom: 20px;
             font-size: 14px;
+            display: none;
         }
 
         .credentials-info h4 {
@@ -392,14 +393,7 @@
             <p>Sistema de Gestión Documental</p>
         </div>
         
-        <!-- Información de credenciales -->
-        <div class="credentials-info">
-            <h4>👤 Credenciales de Prueba:</h4>
-            <p><strong>Administrador:</strong><br>
-            Usuario: admin | Contraseña: admin123</p>
-            <p><strong>Usuario Regular:</strong><br>
-            Usuario: usuario | Contraseña: usuario123</p>
-        </div>
+
         
         <div class="login-form">
             <div class="form-group">
@@ -411,8 +405,6 @@
                 <input type="password" id="password" placeholder="Ingrese su contraseña">
             </div>
             <button class="btn" onclick="doLogin()">🔐 Iniciar Sesión</button>
-            <button class="btn btn-secondary" onclick="quickLoginAdmin()">🚀 Login Rápido Admin</button>
-            <button class="btn btn-secondary" onclick="quickLoginUser()">👤 Login Rápido Usuario</button>
         </div>
         <div id="loginAlert" class="alert alert-error" style="margin-top: 20px;">
             Usuario o contraseña incorrectos
@@ -688,17 +680,7 @@
             }
         }
 
-        function quickLoginAdmin() {
-            document.getElementById('username').value = 'admin';
-            document.getElementById('password').value = 'admin123';
-            doLogin();
-        }
 
-        function quickLoginUser() {
-            document.getElementById('username').value = 'usuario';
-            document.getElementById('password').value = 'usuario123';
-            doLogin();
-        }
 
         function doLogout() {
             console.log('Cerrando sesión...');
