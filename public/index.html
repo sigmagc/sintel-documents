@@ -65,6 +65,11 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         }
 
+        .admin-section {
+            border: 2px solid #e74c3c;
+            background: #fdf2f2;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -117,6 +122,14 @@
 
         .btn-secondary {
             background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
         }
 
         .document-preview {
@@ -247,6 +260,37 @@
             100% { transform: rotate(360deg); }
         }
 
+        .admin-counter {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .admin-counter.has-documents {
+            border-left: 4px solid #3498db;
+        }
+
+        .admin-counter.empty {
+            border-left: 4px solid #95a5a6;
+            opacity: 0.7;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+
         @media (max-width: 768px) {
             .row {
                 grid-template-columns: 1fr;
@@ -346,6 +390,66 @@
                 </button>
             </div>
 
+            <!-- Panel de Administración -->
+            <div class="form-section admin-section">
+                <h2 style="color: #e74c3c;">⚠️ Panel de Administración</h2>
+                <p style="color: #721c24; margin-bottom: 20px;">
+                    <strong>Atención:</strong> Estas acciones son irreversibles. Use con precaución.
+                </p>
+                
+                <div class="row">
+                    <div>
+                        <h3>🗑️ Eliminar Documentos</h3>
+                        <button class="btn btn-danger" onclick="confirmDeleteAll()">
+                            🗑️ Eliminar Todos los Documentos
+                        </button>
+                        <br><br>
+                        
+                        <h3>🔄 Reiniciar Contadores</h3>
+                        <div class="form-group">
+                            <label for="resetDepartment">Departamento</label>
+                            <select id="resetDepartment">
+                                <option value="">-- Todos los departamentos --</option>
+                                <option value="GGE">Gerencia General (GGE)</option>
+                                <option value="CAF">Contabilidad y Finanzas (CAF)</option>
+                                <option value="PMO">Oficina de Proyectos (PMO)</option>
+                                <option value="VTA">Ventas (VTA)</option>
+                                <option value="RHU">Recursos Humanos (RHU)</option>
+                                <option value="TEC">Técnico (TEC)</option>
+                                <option value="LEG">Legal (LEG)</option>
+                                <option value="ADM">Administración (ADM)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="resetType">Tipo de Documento</label>
+                            <select id="resetType">
+                                <option value="">-- Todos los tipos --</option>
+                                <option value="oficio">Oficio</option>
+                                <option value="memorando">Memorando</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn btn-secondary" onclick="resetCounters()">
+                            🔄 Reiniciar Contadores
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <h3>📊 Estado de Contadores</h3>
+                        <div id="countersStatus" style="background: white; padding: 15px; border-radius: 5px; max-height: 300px; overflow-y: auto;">
+                            <div style="text-align: center; color: #7f8c8d;">
+                                Cargando contadores...
+                            </div>
+                        </div>
+                        <br>
+                        <button class="btn btn-secondary" onclick="loadCounters()">
+                            🔄 Actualizar Estado
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Vista previa del documento -->
             <div id="documentPreview" class="document-preview" style="display: none;">
                 <div class="document-number" id="generatedNumber"></div>
@@ -367,11 +471,12 @@
                             <th>Asunto</th>
                             <th>Fecha</th>
                             <th>Estado</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="historyTable">
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 30px;">
+                            <td colspan="7" style="text-align: center; padding: 30px;">
                                 <div class="loading"></div> Cargando historial...
                             </td>
                         </tr>
@@ -388,6 +493,7 @@
         window.addEventListener('load', function() {
             loadStats();
             loadHistory();
+            loadCounters();
             showAlert('Sistema iniciado correctamente - Conectado a base de datos PostgreSQL', 'success');
         });
 
@@ -476,6 +582,7 @@
                     // Actualizar estadísticas e historial
                     loadStats();
                     loadHistory();
+                    loadCounters();
                 }
             } catch (error) {
                 showAlert('Error generando documento', 'error');
@@ -503,7 +610,7 @@
                 console.error('Error cargando historial:', error);
                 document.getElementById('historyTable').innerHTML = `
                     <tr>
-                        <td colspan="6" style="text-align: center; color: #e74c3c;">
+                        <td colspan="7" style="text-align: center; color: #e74c3c;">
                             Error cargando historial
                         </td>
                     </tr>
@@ -517,7 +624,7 @@
             if (documents.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" style="text-align: center; color: #7f8c8d;">
+                        <td colspan="7" style="text-align: center; color: #7f8c8d;">
                             No hay documentos generados aún
                         </td>
                     </tr>
@@ -536,8 +643,171 @@
                     <td>${doc.subject}</td>
                     <td>${date}</td>
                     <td><span class="status-indicator status-active"></span>${doc.status}</td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteDocument(${doc.id}, '${doc.document_number}')">
+                            🗑️ Eliminar
+                        </button>
+                    </td>
                 `;
             });
+        }
+
+        // ================================
+        // FUNCIONES DE ADMINISTRACIÓN
+        // ================================
+
+        // Confirmar eliminación de todos los documentos
+        function confirmDeleteAll() {
+            const confirmation = prompt(
+                '⚠️ ADVERTENCIA: Esta acción eliminará TODOS los documentos y reiniciará los contadores.\n\n' +
+                'Para confirmar, escriba exactamente: ELIMINAR TODO'
+            );
+            
+            if (confirmation === 'ELIMINAR TODO') {
+                deleteAllDocuments();
+            } else if (confirmation !== null) {
+                showAlert('Confirmación incorrecta. Operación cancelada.', 'error');
+            }
+        }
+
+        // Eliminar todos los documentos
+        async function deleteAllDocuments() {
+            try {
+                const result = await apiCall('/delete-all-documents', {
+                    method: 'DELETE'
+                });
+                
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    loadStats();
+                    loadHistory();
+                    loadCounters();
+                }
+            } catch (error) {
+                showAlert('Error eliminando documentos', 'error');
+            }
+        }
+
+        // Eliminar documento específico
+        async function deleteDocument(documentId, documentNumber) {
+            const confirmation = confirm(
+                `¿Está seguro de eliminar el documento "${documentNumber}"?\n\n` +
+                'Esta acción no se puede deshacer.'
+            );
+            
+            if (!confirmation) return;
+            
+            try {
+                const result = await apiCall(`/delete-document/${documentId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    loadStats();
+                    loadHistory();
+                    loadCounters();
+                }
+            } catch (error) {
+                showAlert('Error eliminando documento', 'error');
+            }
+        }
+
+        // Reiniciar contadores
+        async function resetCounters() {
+            const department = document.getElementById('resetDepartment').value;
+            const type = document.getElementById('resetType').value;
+            
+            if (!department && !type) {
+                // Reiniciar todos los contadores
+                const confirmation = confirm(
+                    '¿Está seguro de reiniciar TODOS los contadores a 0?\n\n' +
+                    'Esta acción no se puede deshacer.'
+                );
+                
+                if (!confirmation) return;
+                
+                try {
+                    const result = await apiCall('/reset-all-counters', {
+                        method: 'POST'
+                    });
+                    
+                    if (result.success) {
+                        showAlert(result.message, 'success');
+                        loadCounters();
+                        loadStats();
+                    }
+                } catch (error) {
+                    showAlert('Error reiniciando contadores', 'error');
+                }
+            } else {
+                // Reiniciar contador específico
+                if (!department || !type) {
+                    showAlert('Para reiniciar un contador específico, seleccione tanto departamento como tipo', 'error');
+                    return;
+                }
+                
+                const confirmation = confirm(
+                    `¿Reiniciar contador ${type} para ${department} ${new Date().getFullYear()}?`
+                );
+                
+                if (!confirmation) return;
+                
+                try {
+                    const result = await apiCall('/reset-counter', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            department: department,
+                            document_type: type,
+                            year: new Date().getFullYear()
+                        })
+                    });
+                    
+                    if (result.success) {
+                        showAlert(result.message, 'success');
+                        loadCounters();
+                        loadStats();
+                    }
+                } catch (error) {
+                    showAlert('Error reiniciando contador', 'error');
+                }
+            }
+        }
+
+        // Cargar estado de contadores
+        async function loadCounters() {
+            try {
+                const counters = await apiCall('/counters');
+                updateCountersDisplay(counters);
+            } catch (error) {
+                document.getElementById('countersStatus').innerHTML = 
+                    '<div style="color: #e74c3c;">Error cargando contadores</div>';
+            }
+        }
+
+        // Actualizar display de contadores
+        function updateCountersDisplay(counters) {
+            const container = document.getElementById('countersStatus');
+            
+            if (counters.length === 0) {
+                container.innerHTML = '<div style="color: #7f8c8d;">No hay contadores creados</div>';
+                return;
+            }
+            
+            let html = '';
+            counters.forEach(counter => {
+                const className = counter.counter > 0 ? 'has-documents' : 'empty';
+                html += `
+                    <div class="admin-counter ${className}">
+                        <strong>${counter.department} - ${counter.document_type.toUpperCase()}</strong>
+                        <span style="float: right;">
+                            Año: ${counter.year} | Contador: <strong>${counter.counter}</strong>
+                        </span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
         }
 
         function createDocumentHTML(doc) {
@@ -619,6 +889,7 @@ Firma y Sello
         function refreshData() {
             loadStats();
             loadHistory();
+            loadCounters();
             showAlert('Datos actualizados correctamente', 'success');
         }
 
