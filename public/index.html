@@ -756,7 +756,7 @@
                 <div class="document-number" id="generatedNumber"></div>
                 <div id="documentContent"></div>
                 <br>
-                <button class="btn" onclick="downloadWord()">📥 Descargar Word</button>
+                <button class="btn" onclick="downloadWord()">📥 Descargar Word Nuevamente</button>
                 <button class="btn btn-secondary" onclick="clearPreview()">🗑️ Limpiar Vista</button>
             </div>
 
@@ -1058,8 +1058,11 @@
                     document.getElementById('documentContent').innerHTML = createDocumentHTML(currentDocument);
                     document.getElementById('documentPreview').style.display = 'block';
 
-                    showAlert(result.message, 'success');
-                    updateStatus('🟢 Documento generado exitosamente', 'success');
+                    // 🆕 DESCARGA AUTOMÁTICA DEL DOCUMENTO WORD
+                    autoDownloadWord();
+
+                    showAlert(`${result.message} - Documento Word descargado automáticamente`, 'success');
+                    updateStatus('🟢 Documento generado y descargado exitosamente', 'success');
                     
                     // Limpiar formulario
                     document.getElementById('subject').value = '';
@@ -1458,6 +1461,22 @@
             };
             
             return defaultContent[documentType] || 'Contenido del documento...';
+        }
+
+        // Función de descarga automática al generar documento
+        function autoDownloadWord() {
+            if (!currentDocument) return;
+
+            const docContent = createWordContent(currentDocument);
+            const fileName = generateFileName(currentDocument);
+            
+            // Agregar timestamp para evitar conflictos de nombres
+            const timestamp = new Date().toISOString().slice(0,19).replace(/[T:]/g, '_');
+            const uniqueFileName = fileName.replace('.doc', `_${timestamp}.doc`);
+            
+            downloadFile(docContent, uniqueFileName, 'application/msword');
+            
+            console.log(`✅ Documento Word generado automáticamente: ${uniqueFileName}`);
         }
 
         function downloadWord() {
