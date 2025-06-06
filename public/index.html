@@ -1141,6 +1141,16 @@
                 const row = tbody.insertRow();
                 const date = new Date(doc.created_date).toLocaleString('es-ES');
                 
+                // Corregir el número del documento si viene con formato incorrecto
+                let documentNumber = doc.document_number;
+                if (documentNumber && documentNumber.startsWith('Documento No.') && doc.document_type) {
+                    const mapping = documentTypeMapping[doc.document_type];
+                    if (mapping && mapping.prefix) {
+                        // Reemplazar "Documento No." con el prefijo correcto
+                        documentNumber = documentNumber.replace('Documento No.', mapping.prefix);
+                    }
+                }
+                
                 // Asegurar que se muestre el nombre correcto del tipo de documento
                 let documentTypeName;
                 if (documentTypeMapping[doc.document_type]) {
@@ -1161,7 +1171,7 @@
                     </td>` : '<td>-</td>';
                 
                 row.innerHTML = `
-                    <td><strong>${doc.document_number}</strong></td>
+                    <td><strong>${documentNumber}</strong></td>
                     <td>${documentTypeName}</td>
                     <td>${doc.department}</td>
                     <td>${doc.subject}</td>
@@ -1441,13 +1451,23 @@
                 day: 'numeric'
             });
 
+            // Corregir el número del documento si viene con formato incorrecto
+            let documentNumber = doc.number;
+            if (documentNumber && documentNumber.startsWith('Documento No.') && doc.type) {
+                const mapping = documentTypeMapping[doc.type];
+                if (mapping && mapping.prefix) {
+                    // Reemplazar "Documento No." con el prefijo correcto
+                    documentNumber = documentNumber.replace('Documento No.', mapping.prefix);
+                }
+            }
+
             return `
                 <div style="text-align: right; margin-bottom: 30px;">
                     <strong>Samborondón, ${today}</strong>
                 </div>
                 
                 <div style="margin-bottom: 20px;">
-                    <strong>${doc.number}</strong>
+                    <strong>${documentNumber}</strong>
                 </div>
                 
                 ${doc.recipient ? `<div style="margin-bottom: 20px;"><strong>Para:</strong> ${doc.recipient}</div>` : ''}
