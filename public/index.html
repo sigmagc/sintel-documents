@@ -632,6 +632,7 @@
                                 <option value="proforma">Proforma</option>
                                 <option value="acta_entrega">Acta de Entrega</option>
                                 <option value="acta_recepcion">Acta de Recepción</option>
+                                <option value="acta_reunion">Acta de Reunión</option>
                             </select>
                         </div>
 
@@ -720,6 +721,7 @@
                                 <option value="proforma">Proforma</option>
                                 <option value="acta_entrega">Acta de Entrega</option>
                                 <option value="acta_recepcion">Acta de Recepción</option>
+                                <option value="acta_reunion">Acta de Reunión</option>
                             </select>
                         </div>
                         
@@ -771,6 +773,7 @@
                                     <option value="proforma">Proforma</option>
                                     <option value="acta_entrega">Acta de Entrega</option>
                                     <option value="acta_recepcion">Acta de Recepción</option>
+                                    <option value="acta_reunion">Acta de Reunión</option>
                                 </select>
                             </div>
                         </div>
@@ -851,7 +854,8 @@
             'orden_compra': { prefix: 'Orden de Compra No.', name: 'Orden de Compra' },
             'proforma': { prefix: 'Proforma No.', name: 'Proforma' },
             'acta_entrega': { prefix: 'Acta de Entrega No.', name: 'Acta de Entrega' },
-            'acta_recepcion': { prefix: 'Acta de Recepción No.', name: 'Acta de Recepción' }
+            'acta_recepcion': { prefix: 'Acta de Recepción No.', name: 'Acta de Recepción' },
+            'acta_reunion': { prefix: 'Acta de Reunión No.', name: 'Acta de Reunión' }
         };
 
         // ================================
@@ -1445,7 +1449,8 @@
                 'orden_compra': 'Estimado proveedor,<br><br>Por medio de la presente, solicitamos cotización para los siguientes productos/servicios:<br><br>[Detalle de productos/servicios]<br><br>Favor enviar cotización a la brevedad posible.<br><br>Atentamente,',
                 'proforma': 'Estimado cliente,<br><br>De acuerdo a su solicitud, adjuntamos la proforma correspondiente:<br><br>[Detalle de productos/servicios]<br><br>La presente proforma tiene una validez de 30 días.<br><br>Cordialmente,',
                 'acta_entrega': 'ACTA DE ENTREGA<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se hace entrega de:<br><br>[Detalle de lo entregado]<br><br>ENTREGA: _____________________<br>RECIBE: _____________________',
-                'acta_recepcion': 'ACTA DE RECEPCIÓN<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:<br><br>[Detalle de lo recibido]<br><br>ESTADO: Conforme / No conforme<br><br>RECIBE: _____________________<br>ENTREGA: _____________________'
+                'acta_recepcion': 'ACTA DE RECEPCIÓN<br><br>En la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:<br><br>[Detalle de lo recibido]<br><br>ESTADO: Conforme / No conforme<br><br>RECIBE: _____________________<br>ENTREGA: _____________________',
+                'acta_reunion': 'ACTA DE REUNIÓN<br><br>Fecha: [fecha]<br>Hora de inicio: [hora inicio]<br>Hora de finalización: [hora fin]<br>Lugar: [lugar de reunión]<br><br><strong>PARTICIPANTES:</strong><br>[Lista de participantes]<br><br><strong>TEMAS TRATADOS:</strong><br>1. [Tema 1]<br>2. [Tema 2]<br>3. [Tema 3]<br><br><strong>ACUERDOS Y COMPROMISOS:</strong><br>1. [Acuerdo 1 - Responsable - Fecha límite]<br>2. [Acuerdo 2 - Responsable - Fecha límite]<br><br><strong>PRÓXIMA REUNIÓN:</strong><br>Fecha: [fecha próxima reunión]<br>Hora: [hora]<br>Lugar: [lugar]<br><br>Levanta el acta: _____________________'
             };
             
             return defaultContent[documentType] || 'Contenido del documento...';
@@ -1495,7 +1500,8 @@ Firma y Sello
                 'orden_compra': 'Estimado proveedor,\n\nPor medio de la presente, solicitamos cotización para los siguientes productos/servicios:\n\n[Detalle de productos/servicios]\n\nFavor enviar cotización a la brevedad posible.\n\nAtentamente,',
                 'proforma': 'Estimado cliente,\n\nDe acuerdo a su solicitud, adjuntamos la proforma correspondiente:\n\n[Detalle de productos/servicios]\n\nLa presente proforma tiene una validez de 30 días.\n\nCordialmente,',
                 'acta_entrega': 'ACTA DE ENTREGA\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se hace entrega de:\n\n[Detalle de lo entregado]\n\nENTREGA: _____________________\nRECIBE: _____________________',
-                'acta_recepcion': 'ACTA DE RECEPCIÓN\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:\n\n[Detalle de lo recibido]\n\nESTADO: Conforme / No conforme\n\nRECIBE: _____________________\nENTREGA: _____________________'
+                'acta_recepcion': 'ACTA DE RECEPCIÓN\n\nEn la ciudad de Samborondón, siendo las [hora] del día [fecha], se recibe conforme:\n\n[Detalle de lo recibido]\n\nESTADO: Conforme / No conforme\n\nRECIBE: _____________________\nENTREGA: _____________________',
+                'acta_reunion': 'ACTA DE REUNIÓN\n\nFecha: [fecha]\nHora de inicio: [hora inicio]\nHora de finalización: [hora fin]\nLugar: [lugar de reunión]\n\nPARTICIPANTES:\n[Lista de participantes]\n\nTEMAS TRATADOS:\n1. [Tema 1]\n2. [Tema 2]\n3. [Tema 3]\n\nACUERDOS Y COMPROMISOS:\n1. [Acuerdo 1 - Responsable - Fecha límite]\n2. [Acuerdo 2 - Responsable - Fecha límite]\n\nPRÓXIMA REUNIÓN:\nFecha: [fecha próxima reunión]\nHora: [hora]\nLugar: [lugar]\n\nLevanta el acta: _____________________'
             };
             
             return defaultContent[documentType] || 'Contenido del documento...';
