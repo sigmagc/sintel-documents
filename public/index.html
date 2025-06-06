@@ -1140,7 +1140,18 @@
             documents.forEach(doc => {
                 const row = tbody.insertRow();
                 const date = new Date(doc.created_date).toLocaleString('es-ES');
-                const documentTypeName = documentTypeMapping[doc.document_type]?.name || doc.document_type;
+                
+                // Asegurar que se muestre el nombre correcto del tipo de documento
+                let documentTypeName;
+                if (documentTypeMapping[doc.document_type]) {
+                    documentTypeName = documentTypeMapping[doc.document_type].name;
+                } else {
+                    // Fallback para tipos de documento no mapeados
+                    documentTypeName = doc.document_type.replace(/_/g, ' ')
+                        .split(' ')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ');
+                }
                 
                 const actionsCell = isAdmin ? 
                     `<td>
@@ -1155,7 +1166,7 @@
                     <td>${doc.department}</td>
                     <td>${doc.subject}</td>
                     <td>${date}</td>
-                    <td><span class="status-indicator status-active"></span>${doc.status}</td>
+                    <td><span class="status-indicator status-active"></span>${doc.status || 'Activo'}</td>
                     ${actionsCell}
                 `;
             });
@@ -1192,7 +1203,10 @@
             // Mostrar información de filtros aplicados
             const activeFilters = [];
             if (typeFilter) {
-                const typeName = documentTypeMapping[typeFilter]?.name || typeFilter;
+                const typeName = documentTypeMapping[typeFilter]?.name || typeFilter.replace(/_/g, ' ')
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
                 activeFilters.push(`Tipo: ${typeName}`);
             }
             if (departmentFilter) {
@@ -1390,7 +1404,19 @@
             let html = '';
             counters.forEach(counter => {
                 const className = counter.counter > 0 ? 'has-documents' : 'empty';
-                const typeName = documentTypeMapping[counter.document_type]?.name || counter.document_type;
+                
+                // Asegurar que se muestre el nombre correcto del tipo de documento
+                let typeName;
+                if (documentTypeMapping[counter.document_type]) {
+                    typeName = documentTypeMapping[counter.document_type].name;
+                } else {
+                    // Fallback para tipos de documento no mapeados
+                    typeName = counter.document_type.replace(/_/g, ' ')
+                        .split(' ')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ');
+                }
+                
                 html += `
                     <div class="admin-counter ${className}">
                         <strong>${counter.department} - ${typeName}</strong>
