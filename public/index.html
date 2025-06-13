@@ -964,15 +964,24 @@
 
         function initializeMockDocuments() {
             console.log('🔄 Iniciando proceso de inicialización...');
+            console.log('🏁 Estado systemReset:', window.systemReset);
+            console.log('📊 mockDocuments.length actual:', mockDocuments.length);
+            console.log('🔢 mockCounters keys:', Object.keys(mockCounters).length);
             
             // Si el sistema fue reiniciado por el admin, NO inicializar documentos
-            if (window.systemReset) {
+            if (window.systemReset === true) {
                 console.log('🚫 Sistema fue reiniciado - NO inicializando documentos de ejemplo');
                 console.log('📄 Manteniendo sistema limpio');
                 return;
             }
             
-            console.log('🔄 Inicializando documentos de ejemplo (primera carga)...');
+            // Si ya hay documentos, no reinicializar
+            if (mockDocuments.length > 0) {
+                console.log('📚 Ya hay documentos en el sistema - NO reinicializando');
+                return;
+            }
+            
+            console.log('🔄 Inicializando documentos de ejemplo (primera carga del sistema)...');
             
             // Inicializar contadores con algunos valores de ejemplo
             const year = new Date().getFullYear();
