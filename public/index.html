@@ -973,6 +973,8 @@
                     recipient: 'Junta Directiva',
                     content: '',
                     created_date: new Date(Date.now() - 86400000).toISOString(), // Ayer
+                    created_by: 'sistema',
+                    created_by_role: 'Sistema',
                     status: 'Activo'
                 },
                 {
@@ -984,6 +986,8 @@
                     recipient: 'Todo el personal',
                     content: '',
                     created_date: new Date(Date.now() - 172800000).toISOString(), // Hace 2 días
+                    created_by: 'sistema',
+                    created_by_role: 'Sistema',
                     status: 'Activo'
                 },
                 {
@@ -995,6 +999,8 @@
                     recipient: 'Cliente ABC',
                     content: '',
                     created_date: new Date(Date.now() - 259200000).toISOString(), // Hace 3 días
+                    created_by: 'sistema',
+                    created_by_role: 'Sistema',
                     status: 'Activo'
                 },
                 {
@@ -1006,6 +1012,8 @@
                     recipient: 'Proveedor XYZ',
                     content: '',
                     created_date: new Date(Date.now() - 345600000).toISOString(), // Hace 4 días
+                    created_by: 'sistema',
+                    created_by_role: 'Sistema',
                     status: 'Activo'
                 }
             ];
@@ -1189,7 +1197,49 @@
             }
         }
 
-        // Función auxiliar para generar número de documento mock con secuencia correcta
+        // Función de debugging - puedes ejecutarla desde la consola del navegador
+        function debugDocuments() {
+            console.log('=== ESTADO ACTUAL DEL SISTEMA ===');
+            console.log('👤 Usuario actual:', currentUser?.username, '(' + currentUser?.role + ')');
+            console.log('📊 mockDocuments.length:', mockDocuments.length);
+            console.log('📋 allDocuments.length:', allDocuments.length);
+            console.log('🔢 mockCounters:', JSON.stringify(mockCounters, null, 2));
+            console.log('🆔 documentCounter:', documentCounter);
+            console.log('');
+            
+            if (mockDocuments.length > 0) {
+                console.log('📄 DOCUMENTOS EN SISTEMA:');
+                mockDocuments.forEach((doc, index) => {
+                    console.log(`  ${index + 1}. ID:${doc.id} - ${doc.document_number}`);
+                    console.log(`     Asunto: "${doc.subject}"`);
+                    console.log(`     Tipo: ${doc.document_type}`);
+                    console.log(`     Departamento: ${doc.department}`);
+                    console.log(`     Creado por: ${doc.created_by || 'N/A'} (${doc.created_by_role || 'N/A'})`);
+                    console.log(`     Fecha: ${doc.created_date}`);
+                    console.log('');
+                });
+            } else {
+                console.log('📄 NO HAY DOCUMENTOS EN EL SISTEMA');
+            }
+            
+            // Verificar elementos DOM
+            const totalDocsElement = document.getElementById('totalDocuments');
+            const historyTable = document.getElementById('historyTable');
+            console.log('🎯 DOM - Total documentos mostrado:', totalDocsElement?.textContent);
+            console.log('🎯 DOM - Filas en tabla historial:', historyTable?.children.length);
+            
+            console.log('=== FIN DEBUG ===');
+            
+            return {
+                mockDocuments: mockDocuments.length,
+                allDocuments: allDocuments.length,
+                mockCounters: Object.keys(mockCounters).length,
+                documentCounter: documentCounter
+            };
+        }
+
+        // Exponer función para debugging en consola
+        window.debugDocuments = debugDocuments;
         function generateMockDocumentNumber(type, department) {
             const year = new Date().getFullYear();
             const counterKey = `${department}-${type}-${year}`;
@@ -1462,57 +1512,80 @@
                 return;
             }
             
-            console.log('🗑️ Eliminando TODOS los documentos del sistema (sin importar usuario)...');
-            console.log('📊 Documentos totales antes de eliminar:', mockDocuments.length);
-            console.log('🔢 Contadores antes de eliminar:', mockCounters);
+            console.log('🗑️ INICIO DE ELIMINACIÓN MASIVA');
+            console.log('📊 mockDocuments.length ANTES:', mockDocuments.length);
+            console.log('📋 allDocuments.length ANTES:', allDocuments.length);
+            console.log('🔢 mockCounters ANTES:', JSON.stringify(mockCounters));
             
-            // Mostrar lista de documentos que se van a eliminar
-            if (mockDocuments.length > 0) {
-                console.log('📄 Documentos a eliminar:');
-                mockDocuments.forEach((doc, index) => {
-                    console.log(`  ${index + 1}. ${doc.document_number} - ${doc.subject}`);
-                });
-            }
+            // Mostrar TODOS los documentos que existen actualmente
+            console.log('📄 DOCUMENTOS ACTUALES:');
+            mockDocuments.forEach((doc, index) => {
+                console.log(`  ${index + 1}. ID:${doc.id} - ${doc.document_number} - "${doc.subject}" [Creado por: ${doc.created_by || 'N/A'}]`);
+            });
             
             try {
-                // Simular eliminación COMPLETA
                 const deletedCount = mockDocuments.length;
                 
-                // Limpiar TODOS los arrays y contadores globalmente
-                mockDocuments.splice(0, mockDocuments.length); // Vaciar completamente el array
-                allDocuments.splice(0, allDocuments.length);   // Vaciar también allDocuments
-                mockCounters = {};                              // Reiniciar contadores
-                documentCounter = 1;                            // Reiniciar contador de IDs
+                // FORZAR eliminación completa - múltiples métodos
+                console.log('🔥 ELIMINANDO con múltiples métodos...');
                 
-                console.log('📊 Documentos después de eliminar:', mockDocuments.length);
-                console.log('🔢 Contadores después de eliminar:', mockCounters);
-                console.log('🆔 Contador de IDs reiniciado a:', documentCounter);
+                // Método 1: Vaciar array por referencia
+                mockDocuments.length = 0;
                 
-                const result = {
-                    success: true,
-                    message: `Se eliminaron ${deletedCount} documentos de todos los usuarios y se reiniciaron todos los contadores`
-                };
+                // Método 2: Reasignar array vacío
+                window.mockDocuments = [];
                 
-                if (result.success) {
+                // Método 3: Limpiar allDocuments también
+                allDocuments.length = 0;
+                window.allDocuments = [];
+                
+                // Método 4: Reiniciar contadores
+                mockCounters = {};
+                window.mockCounters = {};
+                
+                // Método 5: Reiniciar contador de IDs
+                documentCounter = 1;
+                window.documentCounter = 1;
+                
+                // Verificación inmediata
+                console.log('📊 mockDocuments.length DESPUÉS:', mockDocuments.length);
+                console.log('📋 allDocuments.length DESPUÉS:', allDocuments.length);
+                console.log('🔢 mockCounters DESPUÉS:', JSON.stringify(mockCounters));
+                console.log('🆔 documentCounter DESPUÉS:', documentCounter);
+                
+                if (mockDocuments.length === 0) {
+                    console.log('✅ ELIMINACIÓN EXITOSA');
+                    
+                    const result = {
+                        success: true,
+                        message: `✅ Se eliminaron ${deletedCount} documentos y se reinició el sistema completamente`
+                    };
+                    
                     showAlert(result.message, 'success');
                     
-                    // Actualizar TODAS las vistas para TODOS los usuarios
-                    loadMockStats();
-                    loadMockHistory();
-                    loadMockCounters();
+                    // Forzar actualización inmediata de todas las vistas
+                    console.log('🔄 Actualizando todas las vistas...');
+                    setTimeout(() => {
+                        loadMockStats();
+                        loadMockHistory();
+                        loadMockCounters();
+                        clearPreview();
+                        
+                        // Limpiar filtros
+                        document.getElementById('filterType').value = '';
+                        document.getElementById('filterDepartment').value = '';
+                        
+                        console.log('✅ Todas las vistas actualizadas');
+                    }, 100);
                     
-                    // Limpiar vista previa si existe
-                    clearPreview();
-                    
-                    // Limpiar filtros
-                    document.getElementById('filterType').value = '';
-                    document.getElementById('filterDepartment').value = '';
-                    
-                    console.log('✅ TODOS los documentos eliminados y vistas actualizadas');
-                    updateStatus('🟢 Sistema reiniciado - Todos los documentos eliminados', 'success');
+                    updateStatus('🟢 Sistema completamente reiniciado', 'success');
+                } else {
+                    console.log('❌ ELIMINACIÓN FALLÓ - aún hay documentos');
+                    showAlert('Error: No se pudieron eliminar todos los documentos', 'error');
                 }
+                
             } catch (error) {
-                console.error('❌ Error eliminando documentos:', error);
+                console.error('❌ ERROR EN ELIMINACIÓN:', error);
                 showAlert('Error eliminando documentos: ' + error.message, 'error');
             }
         }
