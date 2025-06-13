@@ -935,13 +935,21 @@
             // Configurar permisos
             setupPermissions();
             
-            // Inicializar documentos de ejemplo solo SI NO EXISTEN YA
-            // Esto es importante para mantener la persistencia entre usuarios
+            // IMPORTANTE: Solo inicializar documentos si realmente no existen
+            // Y solo en la primera carga de la aplicación (no al cambiar usuarios)
+            console.log('🔍 Verificando estado del sistema...');
+            console.log('📊 mockDocuments.length:', mockDocuments.length);
+            console.log('🔢 Object.keys(mockCounters).length:', Object.keys(mockCounters).length);
+            
+            // Solo inicializar si es la primera vez que se carga la aplicación
+            // (no hay documentos NI contadores)
             if (mockDocuments.length === 0 && Object.keys(mockCounters).length === 0) {
+                console.log('🔄 Primera carga: inicializando documentos de ejemplo');
                 initializeMockDocuments();
-                console.log('🔄 Documentos inicializados por primera vez');
             } else {
-                console.log('📚 Usando documentos existentes:', mockDocuments.length);
+                console.log('📚 Sistema ya tiene datos - NO reinicializando');
+                console.log('📄 Documentos existentes:', mockDocuments.length);
+                console.log('🔢 Contadores existentes:', Object.keys(mockCounters).length);
             }
             
             // Cargar datos (siempre carga todos los documentos, sin importar el usuario)
@@ -949,10 +957,20 @@
             loadHistory();
             
             console.log('✅ Aplicación cargada para:', currentUser.role);
+            console.log('📊 Estado final - Documentos:', mockDocuments.length);
         }
 
         function initializeMockDocuments() {
-            console.log('🔄 Inicializando documentos de ejemplo...');
+            console.log('🔄 Iniciando proceso de inicialización...');
+            
+            // Si el sistema fue reiniciado por el admin, NO inicializar documentos
+            if (window.systemReset) {
+                console.log('🚫 Sistema fue reiniciado - NO inicializando documentos de ejemplo');
+                console.log('📄 Manteniendo sistema limpio');
+                return;
+            }
+            
+            console.log('🔄 Inicializando documentos de ejemplo (primera carga)...');
             
             // Inicializar contadores con algunos valores de ejemplo
             const year = new Date().getFullYear();
@@ -1018,7 +1036,7 @@
                 }
             ];
             
-            mockDocuments = [...exampleDocs];
+            mockDocuments.push(...exampleDocs);
             documentCounter = exampleDocs.length + 1;
             
             console.log('✅ Documentos de ejemplo inicializados:', mockDocuments.length);
@@ -1306,10 +1324,10 @@
             }
         }
 
-        // Funciones mock para testing
+        // Funciones mock para testing - versión mejorada con verificación
         function loadMockStats() {
             console.log('📊 Cargando estadísticas mock...');
-            console.log('📄 Total documentos mock:', mockDocuments.length);
+            console.log('📄 Total documentos mock (verificación):', mockDocuments.length);
             
             const totalDocs = mockDocuments.length;
             const today = new Date().toDateString();
@@ -1319,22 +1337,35 @@
             const departments = mockDocuments.length > 0 ? 
                 new Set(mockDocuments.map(doc => doc.department)).size : 0;
             
-            document.getElementById('totalDocuments').textContent = totalDocs;
-            document.getElementById('todayDocuments').textContent = todayDocs;
-            document.getElementById('activeDepartments').textContent = departments;
+            // Forzar actualización de elementos DOM
+            const totalElement = document.getElementById('totalDocuments');
+            const todayElement = document.getElementById('todayDocuments');
+            const deptsElement = document.getElementById('activeDepartments');
             
-            console.log('✅ Estadísticas actualizadas:', { totalDocs, todayDocs, departments });
+            if (totalElement) totalElement.textContent = totalDocs;
+            if (todayElement) todayElement.textContent = todayDocs;
+            if (deptsElement) deptsElement.textContent = departments;
+            
+            console.log('✅ Estadísticas DOM actualizadas:', { totalDocs, todayDocs, departments });
+            console.log('🎯 DOM verificación - total:', totalElement?.textContent, 'hoy:', todayElement?.textContent);
         }
 
         function loadMockHistory() {
             console.log('📚 Cargando historial mock...');
-            console.log('📄 Documentos a mostrar:', mockDocuments.length);
+            console.log('📄 Documentos a mostrar (verificación):', mockDocuments.length);
             
-            allDocuments = [...mockDocuments]; // Copiar documentos mock
+            // Forzar sincronización
+            allDocuments.length = 0;
+            allDocuments.push(...mockDocuments);
+            
             updateHistoryTable(allDocuments);
             updateHistoryInfo(allDocuments.length);
             
             console.log('✅ Historial actualizado con', allDocuments.length, 'documentos');
+            
+            // Verificación DOM
+            const historyTable = document.getElementById('historyTable');
+            console.log('🎯 DOM verificación - filas en tabla:', historyTable?.children.length);
         }
 
         async function loadStats() {
@@ -1532,20 +1563,28 @@
                 // Método 1: Vaciar array por referencia
                 mockDocuments.length = 0;
                 
-                // Método 2: Reasignar array vacío
-                window.mockDocuments = [];
+                // Método 2: Reasignar array vacío GLOBALMENTE
+                window.mockDocuments = mockDocuments; // Mantener referencia
                 
                 // Método 3: Limpiar allDocuments también
                 allDocuments.length = 0;
-                window.allDocuments = [];
+                window.allDocuments = allDocuments; // Mantener referencia
                 
-                // Método 4: Reiniciar contadores
+                // Método 4: Reiniciar contadores pero mantener estructura
+                for (let key in mockCounters) {
+                    delete mockCounters[key];
+                }
                 mockCounters = {};
-                window.mockCounters = {};
+                window.mockCounters = mockCounters; // Mantener referencia
                 
                 // Método 5: Reiniciar contador de IDs
                 documentCounter = 1;
                 window.documentCounter = 1;
+                
+                // IMPORTANTE: Marcar que el sistema ha sido reiniciado
+                window.systemReset = true;
+                
+                console.log('🏁 Marcando sistema como reiniciado');
                 
                 // Verificación inmediata
                 console.log('📊 mockDocuments.length DESPUÉS:', mockDocuments.length);
