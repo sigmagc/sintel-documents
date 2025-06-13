@@ -834,7 +834,7 @@
         let allDocuments = []; // Almacenar todos los documentos para filtrado
         let mockDocuments = []; // Documentos simulados para testing
         let documentCounter = 1; // Contador para documentos mock
-        let mockCounters = {}; // Contadores simulados para testing
+        let mockCounters = {}; // Contadores simulados para testing - formato: {dept-tipo-año: numero}
 
         // Usuarios del sistema
         const users = {
@@ -950,10 +950,19 @@
         function initializeMockDocuments() {
             console.log('🔄 Inicializando documentos de ejemplo...');
             
+            // Inicializar contadores con algunos valores de ejemplo
+            const year = new Date().getFullYear();
+            mockCounters = {
+                [`GGE-oficio-${year}`]: 6,
+                [`RHU-memorando-${year}`]: 3,
+                [`CAF-proforma-${year}`]: 2,
+                [`TEC-acta_entrega_externa-${year}`]: 1
+            };
+            
             const exampleDocs = [
                 {
                     id: 1,
-                    document_number: 'Oficio No. GGE-001-2025',
+                    document_number: `Oficio No. GGE-006-${year}`,
                     document_type: 'oficio',
                     department: 'GGE',
                     subject: 'Convocatoria a reunión de directorio',
@@ -964,13 +973,35 @@
                 },
                 {
                     id: 2,
-                    document_number: 'Memorando No. RHU-003-2025',
+                    document_number: `Memorando No. RHU-003-${year}`,
                     document_type: 'memorando',
                     department: 'RHU',
                     subject: 'Políticas de trabajo remoto',
                     recipient: 'Todo el personal',
                     content: '',
                     created_date: new Date(Date.now() - 172800000).toISOString(), // Hace 2 días
+                    status: 'Activo'
+                },
+                {
+                    id: 3,
+                    document_number: `Proforma No. CAF-002-${year}`,
+                    document_type: 'proforma',
+                    department: 'CAF',
+                    subject: 'Cotización servicios contables',
+                    recipient: 'Cliente ABC',
+                    content: '',
+                    created_date: new Date(Date.now() - 259200000).toISOString(), // Hace 3 días
+                    status: 'Activo'
+                },
+                {
+                    id: 4,
+                    document_number: `Acta de Entrega-Recepción Externa No. TEC-001-${year}`,
+                    document_type: 'acta_entrega_externa',
+                    department: 'TEC',
+                    subject: 'Entrega de equipos informáticos',
+                    recipient: 'Proveedor XYZ',
+                    content: '',
+                    created_date: new Date(Date.now() - 345600000).toISOString(), // Hace 4 días
                     status: 'Activo'
                 }
             ];
@@ -979,6 +1010,7 @@
             documentCounter = exampleDocs.length + 1;
             
             console.log('✅ Documentos de ejemplo inicializados:', mockDocuments.length);
+            console.log('📊 Contadores inicializados:', mockCounters);
         }
 
         function setupPermissions() {
@@ -1116,15 +1148,9 @@
                     
                     mockDocuments.unshift(mockDoc); // Agregar al inicio del array
                     
-                    // Actualizar contador mock
-                    const counterKey = `${documentData.department}-${documentType}-${new Date().getFullYear()}`;
-                    if (!mockCounters[counterKey]) {
-                        mockCounters[counterKey] = 0;
-                    }
-                    mockCounters[counterKey]++;
-                    
+                    // Actualizar contador mock (ya se actualizó en generateMockDocumentNumber)
                     console.log('📚 Documento agregado al historial mock:', mockDoc);
-                    console.log('🔢 Contador actualizado:', counterKey, '=', mockCounters[counterKey]);
+                    console.log('🔢 Estado actual de contadores:', mockCounters);
 
                     // Mostrar vista previa
                     document.getElementById('generatedNumber').textContent = result.documentNumber;
@@ -1156,23 +1182,34 @@
             }
         }
 
-        // Función auxiliar para generar número de documento mock
+        // Función auxiliar para generar número de documento mock con secuencia correcta
         function generateMockDocumentNumber(type, department) {
             const year = new Date().getFullYear();
-            const mockCounter = Math.floor(Math.random() * 100) + 1;
-            const mapping = documentTypeMapping[type];
+            const counterKey = `${department}-${type}-${year}`;
             
-            console.log('🔢 Generando número para tipo:', type);
+            console.log('🔢 Generando número para:', { type, department, year });
+            console.log('🔑 Clave del contador:', counterKey);
+            
+            // Obtener el siguiente número secuencial
+            if (!mockCounters[counterKey]) {
+                mockCounters[counterKey] = 0;
+            }
+            mockCounters[counterKey]++;
+            
+            const sequentialNumber = mockCounters[counterKey];
+            console.log('📈 Número secuencial:', sequentialNumber);
+            
+            const mapping = documentTypeMapping[type];
             console.log('🗂️ Mapeo encontrado:', mapping);
             
             if (mapping && mapping.prefix) {
-                const documentNumber = `${mapping.prefix} ${department}-${String(mockCounter).padStart(3, '0')}-${year}`;
+                const documentNumber = `${mapping.prefix} ${department}-${String(sequentialNumber).padStart(3, '0')}-${year}`;
                 console.log('✅ Número generado:', documentNumber);
                 return documentNumber;
             }
             
             // Fallback
-            const fallbackNumber = `Documento No. ${department}-${String(mockCounter).padStart(3, '0')}-${year}`;
+            const fallbackNumber = `Documento No. ${department}-${String(sequentialNumber).padStart(3, '0')}-${year}`;
             console.log('⚠️ Usando fallback:', fallbackNumber);
             return fallbackNumber;
         }
@@ -1183,10 +1220,29 @@
                 const type = document.getElementById('documentType').value;
                 const department = document.getElementById('department').value;
                 
-                const data = await apiCall(`/next-number/${type}/${department}`);
-                showAlert(`Próximo número: ${data.documentNumber}`, 'success');
+                console.log('👁️ Previsualizando próximo número para:', { type, department });
+                
+                // Simular el próximo número
+                const year = new Date().getFullYear();
+                const counterKey = `${department}-${type}-${year}`;
+                const currentCount = mockCounters[counterKey] || 0;
+                const nextNumber = currentCount + 1;
+                
+                const mapping = documentTypeMapping[type];
+                let nextDocumentNumber;
+                
+                if (mapping && mapping.prefix) {
+                    nextDocumentNumber = `${mapping.prefix} ${department}-${String(nextNumber).padStart(3, '0')}-${year}`;
+                } else {
+                    nextDocumentNumber = `Documento No. ${department}-${String(nextNumber).padStart(3, '0')}-${year}`;
+                }
+                
+                console.log('🔮 Próximo número:', nextDocumentNumber);
+                
+                showAlert(`Próximo número: ${nextDocumentNumber}`, 'success');
                 updateStatus('🟢 Sistema conectado - Base de datos activa', 'success');
             } catch (error) {
+                console.error('❌ Error obteniendo próximo número:', error);
                 showAlert('Error obteniendo próximo número', 'error');
             } finally {
                 setButtonLoading('previewBtn', false);
