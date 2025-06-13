@@ -203,22 +203,6 @@
             gap: 25px;
         }
 
-        .credentials-info {
-            background: linear-gradient(135deg, rgba(251, 176, 64, 0.1), rgba(251, 176, 64, 0.05));
-            border: 2px solid rgba(251, 176, 64, 0.3);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 25px;
-            font-size: 14px;
-            display: none;
-        }
-
-        .credentials-info h4 {
-            color: #092947;
-            margin-bottom: 15px;
-            font-size: 1.1em;
-        }
-
         .main-content {
             padding: 40px;
         }
@@ -247,6 +231,86 @@
 
         .admin-section h2 {
             border-bottom-color: #e74c3c;
+        }
+
+        /* Excel Upload Styles */
+        .excel-upload-section {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.05), rgba(39, 174, 96, 0.02));
+            border: 2px solid rgba(39, 174, 96, 0.2);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .excel-upload-section h3 {
+            color: #27ae60;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-right: 15px;
+            margin-bottom: 10px;
+        }
+
+        .file-input {
+            opacity: 0;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3);
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .file-selected {
+            color: #27ae60;
+            font-weight: bold;
+            margin-left: 10px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .excel-preview {
+            background: white;
+            border: 2px solid rgba(39, 174, 96, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow: auto;
+            display: none;
+        }
+
+        .excel-stats {
+            background: rgba(39, 174, 96, 0.1);
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 14px;
         }
 
         .form-group {
@@ -314,6 +378,17 @@
         .btn-secondary:hover:not(:disabled) {
             box-shadow: 0 8px 25px rgba(9, 41, 71, 0.4);
             background: linear-gradient(135deg, #0a3555, #0b3d60);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        }
+
+        .btn-success:hover:not(:disabled) {
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+            background: linear-gradient(135deg, #2ecc71, #58d68d);
         }
 
         .btn-danger {
@@ -616,7 +691,7 @@
                     <div class="stat-label">Departamentos Activos</div>
                 </div>
             </div>
--
+
             <!-- Formulario de generación -->
             <div class="form-section">
                 <h2>🆕 Generar Nuevo Documento</h2>
@@ -758,6 +833,43 @@
             <div class="history-section">
                 <h2>📋 Historial de Documentos</h2>
                 
+                <!-- Sección de carga de Excel -->
+                <div class="excel-upload-section">
+                    <h3>📊 Cargar Historial desde Excel</h3>
+                    <p style="margin-bottom: 15px; color: #555; line-height: 1.5;">
+                        Carga un archivo Excel (.xlsx) con el historial de documentos. El archivo debe contener las columnas: 
+                        <strong>Número</strong>, <strong>Tipo</strong>, <strong>Departamento</strong>, <strong>Asunto</strong>, <strong>Fecha</strong>, <strong>Destinatario</strong> (opcional).
+                    </p>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <div class="file-input-wrapper">
+                            <input type="file" id="excelFile" class="file-input" accept=".xlsx,.xls" onchange="handleExcelUpload(event)">
+                            <label for="excelFile" class="file-input-label">
+                                📁 Seleccionar Archivo Excel
+                            </label>
+                        </div>
+                        <span id="fileSelected" class="file-selected"></span>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <button class="btn btn-success" onclick="processExcelData()" id="processExcelBtn" disabled>
+                            📊 Procesar Excel
+                        </button>
+                        <button class="btn btn-secondary" onclick="downloadExcelTemplate()">
+                            📋 Descargar Plantilla
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportToExcel()">
+                            📤 Exportar a Excel
+                        </button>
+                    </div>
+                    
+                    <!-- Vista previa del Excel -->
+                    <div id="excelPreview" class="excel-preview">
+                        <div id="excelStats" class="excel-stats"></div>
+                        <div id="excelData"></div>
+                    </div>
+                </div>
+                
                 <!-- Filtros del historial -->
                 <div class="form-section" style="margin-bottom: 20px; padding: 20px;">
                     <h3>🔍 Filtros de Búsqueda</h3>
@@ -835,6 +947,7 @@
         let mockDocuments = []; // Documentos simulados para testing
         let documentCounter = 1; // Contador para documentos mock
         let mockCounters = {}; // Contadores simulados para testing - formato: {dept-tipo-año: numero}
+        let excelData = null; // Datos del Excel cargado
 
         // Usuarios del sistema
         const users = {
@@ -850,7 +963,7 @@
             }
         };
 
-        // Mapeo de tipos de documento - ACTUALIZADO
+        // Mapeo de tipos de documento
         const documentTypeMapping = {
             'oficio': { prefix: 'Oficio No.', name: 'Oficio' },
             'memorando': { prefix: 'Memorando No.', name: 'Memorando' },
@@ -862,6 +975,325 @@
         };
 
         // ================================
+        // FUNCIONES DE EXCEL
+        // ================================
+
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                document.getElementById('fileSelected').textContent = '';
+                document.getElementById('processExcelBtn').disabled = true;
+                document.getElementById('excelPreview').style.display = 'none';
+                return;
+            }
+
+            // Verificar que sea un archivo Excel
+            const allowedTypes = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
+            if (!allowedTypes.includes(file.type)) {
+                showAlert('Por favor seleccione un archivo Excel válido (.xlsx o .xls)', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            document.getElementById('fileSelected').textContent = `✓ ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            document.getElementById('processExcelBtn').disabled = false;
+            
+            // Leer y previsualizar el archivo
+            previewExcelFile(file);
+        }
+
+        async function previewExcelFile(file) {
+            try {
+                console.log('📊 Previsualizando archivo Excel:', file.name);
+                
+                // Simular la lectura del Excel (en un entorno real usarías una librería como SheetJS)
+                const mockData = generateMockExcelData();
+                
+                displayExcelPreview(mockData);
+                excelData = mockData;
+                
+                console.log('✅ Vista previa generada con', mockData.length, 'registros');
+                
+            } catch (error) {
+                console.error('Error leyendo Excel:', error);
+                showAlert('Error leyendo el archivo Excel', 'error');
+            }
+        }
+
+        function generateMockExcelData() {
+            // Simular datos de Excel para la demostración
+            return [
+                {
+                    'Número': 'Oficio No. GGE-001-2024',
+                    'Tipo': 'oficio',
+                    'Departamento': 'GGE',
+                    'Asunto': 'Convocatoria reunión anual',
+                    'Fecha': '2024-01-15',
+                    'Destinatario': 'Junta Directiva'
+                },
+                {
+                    'Número': 'Memorando No. RHU-001-2024',
+                    'Tipo': 'memorando',
+                    'Departamento': 'RHU',
+                    'Asunto': 'Actualización de políticas',
+                    'Fecha': '2024-01-20',
+                    'Destinatario': 'Personal'
+                },
+                {
+                    'Número': 'Proforma No. VTA-001-2024',
+                    'Tipo': 'proforma',
+                    'Departamento': 'VTA',
+                    'Asunto': 'Servicios de consultoría',
+                    'Fecha': '2024-01-25',
+                    'Destinatario': 'Cliente ABC'
+                },
+                {
+                    'Número': 'Acta de Reunión No. PMO-001-2024',
+                    'Tipo': 'acta_reunion',
+                    'Departamento': 'PMO',
+                    'Asunto': 'Planificación de proyectos Q1',
+                    'Fecha': '2024-01-30',
+                    'Destinatario': 'Equipo de proyectos'
+                }
+            ];
+        }
+
+        function displayExcelPreview(data) {
+            const preview = document.getElementById('excelPreview');
+            const stats = document.getElementById('excelStats');
+            const dataDiv = document.getElementById('excelData');
+            
+            if (!data || data.length === 0) {
+                preview.style.display = 'none';
+                return;
+            }
+
+            // Mostrar estadísticas
+            stats.innerHTML = `
+                <strong>📊 Resumen del archivo:</strong> 
+                ${data.length} registros encontrados | 
+                Columnas detectadas: ${Object.keys(data[0]).join(', ')}
+            `;
+
+            // Mostrar primeros registros
+            let tableHTML = `
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+            `;
+            
+            Object.keys(data[0]).forEach(key => {
+                tableHTML += `<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">${key}</th>`;
+            });
+            
+            tableHTML += '</tr></thead><tbody>';
+            
+            // Mostrar máximo 5 registros de ejemplo
+            data.slice(0, 5).forEach(row => {
+                tableHTML += '<tr>';
+                Object.values(row).forEach(value => {
+                    tableHTML += `<td style="padding: 8px; border: 1px solid #ddd;">${value || '-'}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+            
+            if (data.length > 5) {
+                tableHTML += `<tr><td colspan="${Object.keys(data[0]).length}" style="padding: 8px; text-align: center; font-style: italic; color: #666;">... y ${data.length - 5} registros más</td></tr>`;
+            }
+            
+            tableHTML += '</tbody></table>';
+            
+            dataDiv.innerHTML = tableHTML;
+            preview.style.display = 'block';
+            
+            console.log('✅ Vista previa mostrada');
+        }
+
+        async function processExcelData() {
+            if (!excelData || excelData.length === 0) {
+                showAlert('No hay datos de Excel para procesar', 'error');
+                return;
+            }
+
+            const processBtn = document.getElementById('processExcelBtn');
+            const originalText = processBtn.innerHTML;
+            processBtn.disabled = true;
+            processBtn.innerHTML = '<div class="loading" style="width: 16px; height: 16px; display: inline-block; margin-right: 8px;"></div>Procesando...';
+
+            try {
+                console.log('🔄 Iniciando procesamiento de', excelData.length, 'registros');
+                
+                let successCount = 0;
+                let errorCount = 0;
+                const errors = [];
+
+                // Procesar cada fila del Excel
+                excelData.forEach((row, index) => {
+                    try {
+                        // Validar datos requeridos
+                        if (!row['Número'] || !row['Tipo'] || !row['Departamento'] || !row['Asunto']) {
+                            errors.push(`Fila ${index + 2}: Faltan datos obligatorios`);
+                            errorCount++;
+                            return;
+                        }
+
+                        // Mapear tipo de documento
+                        let documentType = row['Tipo'].toLowerCase().replace(/\s+/g, '_');
+                        if (!documentTypeMapping[documentType]) {
+                            // Intentar mapear por nombre
+                            for (const [key, value] of Object.entries(documentTypeMapping)) {
+                                if (value.name.toLowerCase() === row['Tipo'].toLowerCase()) {
+                                    documentType = key;
+                                    break;
+                                }
+                            }
+                            
+                            if (!documentTypeMapping[documentType]) {
+                                errors.push(`Fila ${index + 2}: Tipo de documento no válido: ${row['Tipo']}`);
+                                errorCount++;
+                                return;
+                            }
+                        }
+
+                        // Crear documento
+                        const newDoc = {
+                            id: documentCounter++,
+                            document_number: row['Número'],
+                            document_type: documentType,
+                            department: row['Departamento'],
+                            subject: row['Asunto'],
+                            recipient: row['Destinatario'] || '',
+                            content: row['Contenido'] || '',
+                            created_date: row['Fecha'] ? new Date(row['Fecha']).toISOString() : new Date().toISOString(),
+                            created_by: currentUser.username,
+                            created_by_role: currentUser.role,
+                            status: 'Activo',
+                            source: 'excel'
+                        };
+
+                        // Verificar si ya existe un documento con el mismo número
+                        const existingDoc = mockDocuments.find(doc => doc.document_number === newDoc.document_number);
+                        if (existingDoc) {
+                            errors.push(`Fila ${index + 2}: Ya existe un documento con el número ${newDoc.document_number}`);
+                            errorCount++;
+                            return;
+                        }
+
+                        mockDocuments.unshift(newDoc);
+                        successCount++;
+
+                        console.log(`✅ Documento ${newDoc.document_number} importado exitosamente`);
+
+                    } catch (error) {
+                        errors.push(`Fila ${index + 2}: Error procesando datos - ${error.message}`);
+                        errorCount++;
+                        console.error(`❌ Error en fila ${index + 2}:`, error);
+                    }
+                });
+
+                // Mostrar resultados
+                console.log(`📊 Procesamiento completado: ${successCount} éxitos, ${errorCount} errores`);
+                
+                let message = `✅ Procesamiento completado: ${successCount} documentos importados`;
+                if (errorCount > 0) {
+                    message += `, ${errorCount} errores`;
+                }
+
+                showAlert(message, successCount > 0 ? 'success' : 'error');
+
+                if (errors.length > 0 && errors.length <= 5) {
+                    console.warn('Errores encontrados:', errors);
+                    showAlert('Errores encontrados: ' + errors.join('; '), 'error');
+                } else if (errors.length > 5) {
+                    console.warn(`Se encontraron ${errors.length} errores`);
+                    showAlert(`Se encontraron ${errors.length} errores. Revise el formato del archivo.`, 'error');
+                }
+
+                // Actualizar vistas si se importaron documentos
+                if (successCount > 0) {
+                    console.log('🔄 Actualizando vistas del sistema...');
+                    loadMockStats();
+                    loadMockHistory();
+                    if (currentUser.role === 'Administrador') {
+                        loadMockCounters();
+                    }
+                }
+
+                // Limpiar
+                document.getElementById('excelFile').value = '';
+                document.getElementById('fileSelected').textContent = '';
+                document.getElementById('excelPreview').style.display = 'none';
+                excelData = null;
+
+            } catch (error) {
+                console.error('Error procesando Excel:', error);
+                showAlert('Error procesando el archivo Excel: ' + error.message, 'error');
+            } finally {
+                processBtn.disabled = true;
+                processBtn.innerHTML = originalText;
+            }
+        }
+
+        function downloadExcelTemplate() {
+            console.log('📋 Generando plantilla de Excel...');
+            
+            const templateData = `Número,Tipo,Departamento,Asunto,Fecha,Destinatario
+Oficio No. GGE-001-2025,oficio,GGE,Ejemplo de asunto de oficio,2025-01-15,Destinatario ejemplo
+Memorando No. RHU-001-2025,memorando,RHU,Ejemplo de asunto de memorando,2025-01-16,Personal
+Proforma No. VTA-001-2025,proforma,VTA,Ejemplo de asunto de proforma,2025-01-17,Cliente ABC
+Acta de Reunión No. PMO-001-2025,acta_reunion,PMO,Ejemplo de acta de reunión,2025-01-18,Equipo`;
+
+            const blob = new Blob([templateData], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'plantilla_documentos_sintel.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            
+            showAlert('📋 Plantilla descargada. Puede abrirla en Excel y modificarla según sus necesidades.', 'success');
+            console.log('✅ Plantilla descargada exitosamente');
+        }
+
+        function exportToExcel() {
+            console.log('📤 Exportando documentos a Excel...');
+            
+            if (mockDocuments.length === 0) {
+                showAlert('No hay documentos para exportar', 'error');
+                return;
+            }
+
+            // Crear CSV con todos los documentos
+            let csvContent = 'Número,Tipo,Departamento,Asunto,Fecha,Destinatario,Creado por,Estado\n';
+            
+            mockDocuments.forEach(doc => {
+                const type = documentTypeMapping[doc.document_type]?.name || doc.document_type;
+                const date = new Date(doc.created_date).toLocaleDateString('es-ES');
+                const row = [
+                    doc.document_number,
+                    type,
+                    doc.department,
+                    doc.subject,
+                    date,
+                    doc.recipient || '',
+                    doc.created_by || '',
+                    doc.status || 'Activo'
+                ].map(field => `"${(field || '').toString().replace(/"/g, '""')}"`).join(',');
+                
+                csvContent += row + '\n';
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `historial_documentos_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            
+            showAlert(`📤 Exportados ${mockDocuments.length} documentos a Excel exitosamente`, 'success');
+            console.log('✅ Exportación completada:', mockDocuments.length, 'documentos');
+        }
+
+        // ================================
         // FUNCIONES DE AUTENTICACIÓN
         // ================================
 
@@ -870,9 +1302,6 @@
             
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value.trim();
-            
-            console.log('Usuario ingresado:', username);
-            console.log('Usuarios disponibles:', Object.keys(users));
             
             if (!username || !password) {
                 showLoginError('Por favor complete todos los campos');
@@ -887,7 +1316,6 @@
                     ...users[username]
                 };
                 
-                // Guardar en sessionStorage
                 try {
                     sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
                     console.log('✅ Usuario guardado en sesión');
@@ -910,11 +1338,9 @@
             currentUser = null;
             sessionStorage.removeItem('currentUser');
             
-            // Mostrar login
             document.getElementById('mainContainer').classList.add('hidden');
             document.getElementById('loginContainer').classList.remove('hidden');
             
-            // Limpiar formularios
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             
@@ -924,55 +1350,35 @@
         function showMainApp() {
             console.log('Mostrando aplicación principal...');
             
-            // Ocultar login, mostrar app
             document.getElementById('loginContainer').classList.add('hidden');
             document.getElementById('mainContainer').classList.remove('hidden');
             
-            // Actualizar info de usuario
             document.getElementById('currentUser').textContent = currentUser.name;
             document.getElementById('currentRole').textContent = currentUser.role;
             
-            // Configurar permisos
             setupPermissions();
             
-            // IMPORTANTE: Solo inicializar documentos si realmente no existen
-            // Y solo en la primera carga de la aplicación (no al cambiar usuarios)
-            console.log('🔍 Verificando estado del sistema...');
-            console.log('📊 mockDocuments.length:', mockDocuments.length);
-            console.log('🔢 Object.keys(mockCounters).length:', Object.keys(mockCounters).length);
-            
-            // Solo inicializar si es la primera vez que se carga la aplicación
-            // (no hay documentos NI contadores)
             if (mockDocuments.length === 0 && Object.keys(mockCounters).length === 0) {
                 console.log('🔄 Primera carga: inicializando documentos de ejemplo');
                 initializeMockDocuments();
             } else {
                 console.log('📚 Sistema ya tiene datos - NO reinicializando');
-                console.log('📄 Documentos existentes:', mockDocuments.length);
-                console.log('🔢 Contadores existentes:', Object.keys(mockCounters).length);
             }
             
-            // Cargar datos (siempre carga todos los documentos, sin importar el usuario)
             loadStats();
             loadHistory();
             
             console.log('✅ Aplicación cargada para:', currentUser.role);
-            console.log('📊 Estado final - Documentos:', mockDocuments.length);
         }
 
         function initializeMockDocuments() {
-            console.log('🔄 Iniciando proceso de inicialización...');
-            
-            // Si el sistema fue reiniciado por el admin, NO inicializar documentos
             if (window.systemReset) {
                 console.log('🚫 Sistema fue reiniciado - NO inicializando documentos de ejemplo');
-                console.log('📄 Manteniendo sistema limpio');
                 return;
             }
             
             console.log('🔄 Inicializando documentos de ejemplo (primera carga)...');
             
-            // Inicializar contadores con algunos valores de ejemplo
             const year = new Date().getFullYear();
             mockCounters = {
                 [`GGE-oficio-${year}`]: 6,
@@ -990,7 +1396,7 @@
                     subject: 'Convocatoria a reunión de directorio',
                     recipient: 'Junta Directiva',
                     content: '',
-                    created_date: new Date(Date.now() - 86400000).toISOString(), // Ayer
+                    created_date: new Date(Date.now() - 86400000).toISOString(),
                     created_by: 'sistema',
                     created_by_role: 'Sistema',
                     status: 'Activo'
@@ -1003,7 +1409,7 @@
                     subject: 'Políticas de trabajo remoto',
                     recipient: 'Todo el personal',
                     content: '',
-                    created_date: new Date(Date.now() - 172800000).toISOString(), // Hace 2 días
+                    created_date: new Date(Date.now() - 172800000).toISOString(),
                     created_by: 'sistema',
                     created_by_role: 'Sistema',
                     status: 'Activo'
@@ -1016,20 +1422,7 @@
                     subject: 'Cotización servicios contables',
                     recipient: 'Cliente ABC',
                     content: '',
-                    created_date: new Date(Date.now() - 259200000).toISOString(), // Hace 3 días
-                    created_by: 'sistema',
-                    created_by_role: 'Sistema',
-                    status: 'Activo'
-                },
-                {
-                    id: 4,
-                    document_number: `Acta de Entrega-Recepción Externa No. TEC-001-${year}`,
-                    document_type: 'acta_entrega_externa',
-                    department: 'TEC',
-                    subject: 'Entrega de equipos informáticos',
-                    recipient: 'Proveedor XYZ',
-                    content: '',
-                    created_date: new Date(Date.now() - 345600000).toISOString(), // Hace 4 días
+                    created_date: new Date(Date.now() - 259200000).toISOString(),
                     created_by: 'sistema',
                     created_by_role: 'Sistema',
                     status: 'Activo'
@@ -1040,13 +1433,11 @@
             documentCounter = exampleDocs.length + 1;
             
             console.log('✅ Documentos de ejemplo inicializados:', mockDocuments.length);
-            console.log('📊 Contadores inicializados:', mockCounters);
         }
 
         function setupPermissions() {
             const isAdmin = currentUser.role === 'Administrador';
             
-            // Panel de administración
             const adminPanel = document.getElementById('adminPanel');
             if (isAdmin) {
                 adminPanel.classList.remove('hidden');
@@ -1055,7 +1446,6 @@
                 adminPanel.classList.add('hidden');
             }
             
-            // Columna de acciones en historial
             const actionsHeader = document.getElementById('actionsHeader');
             if (!isAdmin) {
                 actionsHeader.style.display = 'none';
@@ -1097,30 +1487,8 @@
         }
 
         // ================================
-        // FUNCIONES DEL SISTEMA ORIGINAL
+        // RESTO DE FUNCIONES DEL SISTEMA
         // ================================
-
-        async function apiCall(endpoint, options = {}) {
-            try {
-                const response = await fetch(`/api${endpoint}`, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    },
-                    ...options
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                return await response.json();
-            } catch (error) {
-                console.error('API Error:', error);
-                updateStatus('🔴 Error de conexión', 'error');
-                throw error;
-            }
-        }
 
         async function generateDocument() {
             try {
@@ -1133,8 +1501,6 @@
                 setButtonLoading('generateBtn', true);
                 
                 const documentType = document.getElementById('documentType').value;
-                console.log('🔍 Tipo de documento seleccionado:', documentType);
-                
                 const documentData = {
                     type: documentType,
                     department: document.getElementById('department').value,
@@ -1143,16 +1509,11 @@
                     content: document.getElementById('content').value
                 };
 
-                console.log('📋 Datos del documento:', documentData);
-
-                // Simulamos la respuesta del API para testing
                 const result = {
                     success: true,
                     documentNumber: generateMockDocumentNumber(documentType, documentData.department),
                     message: 'Documento generado exitosamente'
                 };
-
-                console.log('✅ Resultado simulado:', result);
 
                 if (result.success) {
                     currentDocument = {
@@ -1161,9 +1522,6 @@
                         date: new Date().toLocaleString('es-ES')
                     };
 
-                    console.log('📄 Documento actual creado:', currentDocument);
-
-                    // Agregar al historial mock
                     const mockDoc = {
                         id: documentCounter++,
                         document_number: result.documentNumber,
@@ -1173,34 +1531,25 @@
                         recipient: documentData.recipient,
                         content: documentData.content,
                         created_date: new Date().toISOString(),
-                        created_by: currentUser.username, // Rastrear quién creó el documento
+                        created_by: currentUser.username,
                         created_by_role: currentUser.role,
                         status: 'Activo'
                     };
                     
-                    mockDocuments.unshift(mockDoc); // Agregar al inicio del array
-                    
-                    // Actualizar contador mock (ya se actualizó en generateMockDocumentNumber)
-                    console.log('📚 Documento agregado al historial mock por:', currentUser.username);
-                    console.log('📄 Total documentos en sistema:', mockDocuments.length);
-                    console.log('🔢 Estado actual de contadores:', mockCounters);
+                    mockDocuments.unshift(mockDoc);
 
-                    // Mostrar vista previa
                     document.getElementById('generatedNumber').textContent = result.documentNumber;
                     const htmlContent = createDocumentHTML(currentDocument);
-                    console.log('🎨 HTML generado:', htmlContent.substring(0, 200) + '...');
                     document.getElementById('documentContent').innerHTML = htmlContent;
                     document.getElementById('documentPreview').style.display = 'block';
 
                     showAlert(result.message, 'success');
                     updateStatus('🟢 Documento generado exitosamente', 'success');
                     
-                    // Limpiar formulario
                     document.getElementById('subject').value = '';
                     document.getElementById('recipient').value = '';
                     document.getElementById('content').value = '';
 
-                    // Actualizar datos usando mock
                     loadMockStats();
                     loadMockHistory();
                     if (currentUser.role === 'Administrador') {
@@ -1215,78 +1564,23 @@
             }
         }
 
-        // Función de debugging - puedes ejecutarla desde la consola del navegador
-        function debugDocuments() {
-            console.log('=== ESTADO ACTUAL DEL SISTEMA ===');
-            console.log('👤 Usuario actual:', currentUser?.username, '(' + currentUser?.role + ')');
-            console.log('📊 mockDocuments.length:', mockDocuments.length);
-            console.log('📋 allDocuments.length:', allDocuments.length);
-            console.log('🔢 mockCounters:', JSON.stringify(mockCounters, null, 2));
-            console.log('🆔 documentCounter:', documentCounter);
-            console.log('');
-            
-            if (mockDocuments.length > 0) {
-                console.log('📄 DOCUMENTOS EN SISTEMA:');
-                mockDocuments.forEach((doc, index) => {
-                    console.log(`  ${index + 1}. ID:${doc.id} - ${doc.document_number}`);
-                    console.log(`     Asunto: "${doc.subject}"`);
-                    console.log(`     Tipo: ${doc.document_type}`);
-                    console.log(`     Departamento: ${doc.department}`);
-                    console.log(`     Creado por: ${doc.created_by || 'N/A'} (${doc.created_by_role || 'N/A'})`);
-                    console.log(`     Fecha: ${doc.created_date}`);
-                    console.log('');
-                });
-            } else {
-                console.log('📄 NO HAY DOCUMENTOS EN EL SISTEMA');
-            }
-            
-            // Verificar elementos DOM
-            const totalDocsElement = document.getElementById('totalDocuments');
-            const historyTable = document.getElementById('historyTable');
-            console.log('🎯 DOM - Total documentos mostrado:', totalDocsElement?.textContent);
-            console.log('🎯 DOM - Filas en tabla historial:', historyTable?.children.length);
-            
-            console.log('=== FIN DEBUG ===');
-            
-            return {
-                mockDocuments: mockDocuments.length,
-                allDocuments: allDocuments.length,
-                mockCounters: Object.keys(mockCounters).length,
-                documentCounter: documentCounter
-            };
-        }
-
-        // Exponer función para debugging en consola
-        window.debugDocuments = debugDocuments;
         function generateMockDocumentNumber(type, department) {
             const year = new Date().getFullYear();
             const counterKey = `${department}-${type}-${year}`;
             
-            console.log('🔢 Generando número para:', { type, department, year });
-            console.log('🔑 Clave del contador:', counterKey);
-            
-            // Obtener el siguiente número secuencial
             if (!mockCounters[counterKey]) {
                 mockCounters[counterKey] = 0;
             }
             mockCounters[counterKey]++;
             
             const sequentialNumber = mockCounters[counterKey];
-            console.log('📈 Número secuencial:', sequentialNumber);
-            
             const mapping = documentTypeMapping[type];
-            console.log('🗂️ Mapeo encontrado:', mapping);
             
             if (mapping && mapping.prefix) {
-                const documentNumber = `${mapping.prefix} ${department}-${String(sequentialNumber).padStart(3, '0')}-${year}`;
-                console.log('✅ Número generado:', documentNumber);
-                return documentNumber;
+                return `${mapping.prefix} ${department}-${String(sequentialNumber).padStart(3, '0')}-${year}`;
             }
             
-            // Fallback
-            const fallbackNumber = `Documento No. ${department}-${String(sequentialNumber).padStart(3, '0')}-${year}`;
-            console.log('⚠️ Usando fallback:', fallbackNumber);
-            return fallbackNumber;
+            return `Documento No. ${department}-${String(sequentialNumber).padStart(3, '0')}-${year}`;
         }
 
         async function previewNext() {
@@ -1295,9 +1589,6 @@
                 const type = document.getElementById('documentType').value;
                 const department = document.getElementById('department').value;
                 
-                console.log('👁️ Previsualizando próximo número para:', { type, department });
-                
-                // Simular el próximo número
                 const year = new Date().getFullYear();
                 const counterKey = `${department}-${type}-${year}`;
                 const currentCount = mockCounters[counterKey] || 0;
@@ -1312,8 +1603,6 @@
                     nextDocumentNumber = `Documento No. ${department}-${String(nextNumber).padStart(3, '0')}-${year}`;
                 }
                 
-                console.log('🔮 Próximo número:', nextDocumentNumber);
-                
                 showAlert(`Próximo número: ${nextDocumentNumber}`, 'success');
                 updateStatus('🟢 Sistema conectado - Base de datos activa', 'success');
             } catch (error) {
@@ -1324,11 +1613,7 @@
             }
         }
 
-        // Funciones mock para testing - versión mejorada con verificación
         function loadMockStats() {
-            console.log('📊 Cargando estadísticas mock...');
-            console.log('📄 Total documentos mock (verificación):', mockDocuments.length);
-            
             const totalDocs = mockDocuments.length;
             const today = new Date().toDateString();
             const todayDocs = mockDocuments.filter(doc => 
@@ -1337,7 +1622,6 @@
             const departments = mockDocuments.length > 0 ? 
                 new Set(mockDocuments.map(doc => doc.department)).size : 0;
             
-            // Forzar actualización de elementos DOM
             const totalElement = document.getElementById('totalDocuments');
             const todayElement = document.getElementById('todayDocuments');
             const deptsElement = document.getElementById('activeDepartments');
@@ -1345,46 +1629,27 @@
             if (totalElement) totalElement.textContent = totalDocs;
             if (todayElement) todayElement.textContent = todayDocs;
             if (deptsElement) deptsElement.textContent = departments;
-            
-            console.log('✅ Estadísticas DOM actualizadas:', { totalDocs, todayDocs, departments });
-            console.log('🎯 DOM verificación - total:', totalElement?.textContent, 'hoy:', todayElement?.textContent);
         }
 
         function loadMockHistory() {
-            console.log('📚 Cargando historial mock...');
-            console.log('📄 Documentos a mostrar (verificación):', mockDocuments.length);
-            
-            // Forzar sincronización
             allDocuments.length = 0;
             allDocuments.push(...mockDocuments);
             
             updateHistoryTable(allDocuments);
             updateHistoryInfo(allDocuments.length);
-            
-            console.log('✅ Historial actualizado con', allDocuments.length, 'documentos');
-            
-            // Verificación DOM
-            const historyTable = document.getElementById('historyTable');
-            console.log('🎯 DOM verificación - filas en tabla:', historyTable?.children.length);
         }
 
         async function loadStats() {
-            // SIEMPRE usar documentos mock, sin importar el usuario
-            console.log('📊 Cargando estadísticas para usuario:', currentUser.username);
             loadMockStats();
         }
 
         async function loadHistory() {
-            // SIEMPRE usar documentos mock, sin importar el usuario
-            console.log('📚 Cargando historial para usuario:', currentUser.username);
             loadMockHistory();
         }
 
         function updateHistoryTable(documents) {
             const tbody = document.getElementById('historyTable');
             const isAdmin = currentUser && currentUser.role === 'Administrador';
-            
-            console.log('🔄 Actualizando tabla del historial con', documents.length, 'documentos');
             
             if (documents.length === 0) {
                 tbody.innerHTML = `
@@ -1393,7 +1658,7 @@
                             <div style="font-size: 1.2em; margin-bottom: 10px;">📄</div>
                             <div>No hay documentos en el sistema</div>
                             <div style="font-size: 0.9em; margin-top: 5px; opacity: 0.7;">
-                                Genera tu primer documento usando el formulario de arriba
+                                Genera tu primer documento usando el formulario de arriba o carga un Excel
                             </div>
                         </td>
                     </tr>
@@ -1406,16 +1671,10 @@
                 const row = tbody.insertRow();
                 const date = new Date(doc.created_date).toLocaleString('es-ES');
                 
-                // Usar el número del documento tal como está almacenado
-                let documentNumber = doc.document_number;
-                console.log('📋 Mostrando documento en historial:', documentNumber);
-                
-                // Asegurar que se muestre el nombre correcto del tipo de documento
                 let documentTypeName;
                 if (documentTypeMapping[doc.document_type]) {
                     documentTypeName = documentTypeMapping[doc.document_type].name;
                 } else {
-                    // Fallback para tipos de documento no mapeados
                     documentTypeName = doc.document_type.replace(/_/g, ' ')
                         .split(' ')
                         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -1429,8 +1688,11 @@
                         </button>
                     </td>` : '<td>-</td>';
                 
+                // Agregar indicador de origen Excel
+                const sourceIndicator = doc.source === 'excel' ? ' 📊' : '';
+                
                 row.innerHTML = `
-                    <td><strong>${documentNumber}</strong></td>
+                    <td><strong>${doc.document_number}${sourceIndicator}</strong></td>
                     <td>${documentTypeName}</td>
                     <td>${doc.department}</td>
                     <td>${doc.subject}</td>
@@ -1439,13 +1701,7 @@
                     ${actionsCell}
                 `;
             });
-            
-            console.log('✅ Tabla del historial actualizada');
         }
-
-        // ================================
-        // FUNCIONES DE FILTRADO
-        // ================================
 
         function filterHistory() {
             const typeFilter = document.getElementById('filterType').value;
@@ -1453,31 +1709,24 @@
             
             let filteredDocuments = allDocuments;
             
-            // Filtrar por tipo de documento
             if (typeFilter) {
                 filteredDocuments = filteredDocuments.filter(doc => 
                     doc.document_type === typeFilter
                 );
             }
             
-            // Filtrar por departamento
             if (departmentFilter) {
                 filteredDocuments = filteredDocuments.filter(doc => 
                     doc.department === departmentFilter
                 );
             }
             
-            // Actualizar tabla e información
             updateHistoryTable(filteredDocuments);
             updateHistoryInfo(filteredDocuments.length);
             
-            // Mostrar información de filtros aplicados
             const activeFilters = [];
             if (typeFilter) {
-                const typeName = documentTypeMapping[typeFilter]?.name || typeFilter.replace(/_/g, ' ')
-                    .split(' ')
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ');
+                const typeName = documentTypeMapping[typeFilter]?.name || typeFilter;
                 activeFilters.push(`Tipo: ${typeName}`);
             }
             if (departmentFilter) {
@@ -1504,7 +1753,6 @@
             historyCount.textContent = count;
             historyInfo.style.display = 'block';
             
-            // Cambiar color según la cantidad
             if (count === 0) {
                 historyInfo.style.background = '#f8d7da';
                 historyInfo.style.color = '#721c24';
@@ -1513,10 +1761,6 @@
                 historyInfo.style.color = '#155724';
             }
         }
-
-        // ================================
-        // FUNCIONES DE ADMINISTRACIÓN
-        // ================================
 
         function confirmDeleteAll() {
             if (!currentUser || currentUser.role !== 'Administrador') {
@@ -1536,92 +1780,44 @@
             }
         }
 
-        // Funciones mock para administración
         async function deleteAllDocuments() {
             if (!currentUser || currentUser.role !== 'Administrador') {
                 showAlert('No tiene permisos para esta acción', 'error');
                 return;
             }
             
-            console.log('🗑️ INICIO DE ELIMINACIÓN MASIVA');
-            console.log('📊 mockDocuments.length ANTES:', mockDocuments.length);
-            console.log('📋 allDocuments.length ANTES:', allDocuments.length);
-            console.log('🔢 mockCounters ANTES:', JSON.stringify(mockCounters));
-            
-            // Mostrar TODOS los documentos que existen actualmente
-            console.log('📄 DOCUMENTOS ACTUALES:');
-            mockDocuments.forEach((doc, index) => {
-                console.log(`  ${index + 1}. ID:${doc.id} - ${doc.document_number} - "${doc.subject}" [Creado por: ${doc.created_by || 'N/A'}]`);
-            });
-            
             try {
                 const deletedCount = mockDocuments.length;
                 
-                // FORZAR eliminación completa - múltiples métodos
-                console.log('🔥 ELIMINANDO con múltiples métodos...');
-                
-                // Método 1: Vaciar array por referencia
                 mockDocuments.length = 0;
-                
-                // Método 2: Reasignar array vacío GLOBALMENTE
-                window.mockDocuments = mockDocuments; // Mantener referencia
-                
-                // Método 3: Limpiar allDocuments también
                 allDocuments.length = 0;
-                window.allDocuments = allDocuments; // Mantener referencia
                 
-                // Método 4: Reiniciar contadores pero mantener estructura
                 for (let key in mockCounters) {
                     delete mockCounters[key];
                 }
                 mockCounters = {};
-                window.mockCounters = mockCounters; // Mantener referencia
                 
-                // Método 5: Reiniciar contador de IDs
                 documentCounter = 1;
-                window.documentCounter = 1;
-                
-                // IMPORTANTE: Marcar que el sistema ha sido reiniciado
                 window.systemReset = true;
                 
-                console.log('🏁 Marcando sistema como reiniciado');
+                const result = {
+                    success: true,
+                    message: `✅ Se eliminaron ${deletedCount} documentos y se reinició el sistema completamente`
+                };
                 
-                // Verificación inmediata
-                console.log('📊 mockDocuments.length DESPUÉS:', mockDocuments.length);
-                console.log('📋 allDocuments.length DESPUÉS:', allDocuments.length);
-                console.log('🔢 mockCounters DESPUÉS:', JSON.stringify(mockCounters));
-                console.log('🆔 documentCounter DESPUÉS:', documentCounter);
+                showAlert(result.message, 'success');
                 
-                if (mockDocuments.length === 0) {
-                    console.log('✅ ELIMINACIÓN EXITOSA');
+                setTimeout(() => {
+                    loadMockStats();
+                    loadMockHistory();
+                    loadMockCounters();
+                    clearPreview();
                     
-                    const result = {
-                        success: true,
-                        message: `✅ Se eliminaron ${deletedCount} documentos y se reinició el sistema completamente`
-                    };
-                    
-                    showAlert(result.message, 'success');
-                    
-                    // Forzar actualización inmediata de todas las vistas
-                    console.log('🔄 Actualizando todas las vistas...');
-                    setTimeout(() => {
-                        loadMockStats();
-                        loadMockHistory();
-                        loadMockCounters();
-                        clearPreview();
-                        
-                        // Limpiar filtros
-                        document.getElementById('filterType').value = '';
-                        document.getElementById('filterDepartment').value = '';
-                        
-                        console.log('✅ Todas las vistas actualizadas');
-                    }, 100);
-                    
-                    updateStatus('🟢 Sistema completamente reiniciado', 'success');
-                } else {
-                    console.log('❌ ELIMINACIÓN FALLÓ - aún hay documentos');
-                    showAlert('Error: No se pudieron eliminar todos los documentos', 'error');
-                }
+                    document.getElementById('filterType').value = '';
+                    document.getElementById('filterDepartment').value = '';
+                }, 100);
+                
+                updateStatus('🟢 Sistema completamente reiniciado', 'success');
                 
             } catch (error) {
                 console.error('❌ ERROR EN ELIMINACIÓN:', error);
@@ -1642,24 +1838,15 @@
             
             if (!confirmation) return;
             
-            console.log('🗑️ Eliminando documento:', documentId, documentNumber);
-            
             try {
-                // Encontrar y eliminar el documento del array mock
                 const docIndex = mockDocuments.findIndex(doc => doc.id === documentId);
                 if (docIndex !== -1) {
                     mockDocuments.splice(docIndex, 1);
                     
-                    const result = {
-                        success: true,
-                        message: `Documento "${documentNumber}" eliminado correctamente`
-                    };
-                    
-                    showAlert(result.message, 'success');
+                    showAlert(`Documento "${documentNumber}" eliminado correctamente`, 'success');
                     loadMockStats();
                     loadMockHistory();
                     loadMockCounters();
-                    console.log('✅ Documento eliminado');
                 } else {
                     showAlert('Documento no encontrado', 'error');
                 }
@@ -1670,13 +1857,9 @@
         }
 
         function loadMockCounters() {
-            console.log('📊 Cargando contadores mock...');
-            
-            // Generar contadores basados en los documentos mock existentes
             const counters = [];
             const counterMap = {};
             
-            // Contar documentos por tipo y departamento
             mockDocuments.forEach(doc => {
                 const key = `${doc.department}-${doc.document_type}-${new Date().getFullYear()}`;
                 if (!counterMap[key]) {
@@ -1690,12 +1873,10 @@
                 counterMap[key].counter++;
             });
             
-            // Convertir a array
             Object.values(counterMap).forEach(counter => {
                 counters.push(counter);
             });
             
-            // Agregar algunos contadores vacíos para mostrar
             const departments = ['GGE', 'CAF', 'PMO', 'VTA', 'RHU', 'TEC', 'LEG', 'ADM'];
             const types = ['oficio', 'memorando', 'orden_compra', 'proforma', 'acta_entrega_externa', 'acta_entrega_interna', 'acta_reunion'];
             
@@ -1714,28 +1895,10 @@
             });
             
             updateCountersDisplay(counters);
-            console.log('✅ Contadores mock actualizados:', counters.length);
         }
 
         async function loadCounters() {
-            if (mockDocuments.length >= 0) { // Siempre usar mock en modo testing
-                loadMockCounters();
-                return;
-            }
-            
-            if (!currentUser || currentUser.role !== 'Administrador') {
-                return;
-            }
-            
-            try {
-                const counters = await apiCall('/counters');
-                updateCountersDisplay(counters);
-            } catch (error) {
-                console.error('Error cargando contadores:', error);
-                document.getElementById('countersStatus').innerHTML = 
-                    '<div style="color: #e74c3c;">Error cargando contadores - Usando modo demo</div>';
-                loadMockCounters();
-            }
+            loadMockCounters();
         }
 
         async function resetCounters() {
@@ -1747,8 +1910,6 @@
             const department = document.getElementById('resetDepartment').value;
             const type = document.getElementById('resetType').value;
             
-            console.log('🔄 Reiniciando contadores (modo mock):', { department, type });
-            
             if (!department && !type) {
                 const confirmation = confirm(
                     '¿Está seguro de reiniciar TODOS los contadores a 0?\n\n' +
@@ -1758,22 +1919,11 @@
                 if (!confirmation) return;
                 
                 try {
-                    // Reiniciar todos los contadores pero mantener documentos
                     mockCounters = {};
-                    
-                    const result = {
-                        success: true,
-                        message: 'Todos los contadores han sido reiniciados a 0'
-                    };
-                    
-                    if (result.success) {
-                        showAlert(result.message, 'success');
-                        loadMockCounters();
-                        loadMockStats();
-                        console.log('✅ Todos los contadores reiniciados');
-                    }
+                    showAlert('Todos los contadores han sido reiniciados a 0', 'success');
+                    loadMockCounters();
+                    loadMockStats();
                 } catch (error) {
-                    console.error('❌ Error reiniciando contadores:', error);
                     showAlert('Error reiniciando contadores', 'error');
                 }
             } else {
@@ -1789,25 +1939,15 @@
                 if (!confirmation) return;
                 
                 try {
-                    // Reiniciar contador específico
                     const key = `${department}-${type}-${new Date().getFullYear()}`;
                     if (mockCounters[key]) {
                         mockCounters[key] = 0;
                     }
                     
-                    const result = {
-                        success: true,
-                        message: `Contador ${documentTypeMapping[type]?.name || type} para ${department} reiniciado`
-                    };
-                    
-                    if (result.success) {
-                        showAlert(result.message, 'success');
-                        loadMockCounters();
-                        loadMockStats();
-                        console.log('✅ Contador específico reiniciado');
-                    }
+                    showAlert(`Contador ${documentTypeMapping[type]?.name || type} para ${department} reiniciado`, 'success');
+                    loadMockCounters();
+                    loadMockStats();
                 } catch (error) {
-                    console.error('❌ Error reiniciando contador:', error);
                     showAlert('Error reiniciando contador', 'error');
                 }
             }
@@ -1825,12 +1965,10 @@
             counters.forEach(counter => {
                 const className = counter.counter > 0 ? 'has-documents' : 'empty';
                 
-                // Asegurar que se muestre el nombre correcto del tipo de documento
                 let typeName;
                 if (documentTypeMapping[counter.document_type]) {
                     typeName = documentTypeMapping[counter.document_type].name;
                 } else {
-                    // Fallback para tipos de documento no mapeados
                     typeName = counter.document_type.replace(/_/g, ' ')
                         .split(' ')
                         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -1850,44 +1988,27 @@
             container.innerHTML = html;
         }
 
-        // ================================
-        // FUNCIONES DE DOCUMENTOS
-        // ================================
-
         function createDocumentHTML(doc) {
-            console.log('🎨 Creando HTML para documento:', doc);
-            console.log('📝 Tipo de documento:', doc.type);
-            console.log('🔢 Número recibido:', doc.number);
-            
             const today = new Date().toLocaleDateString('es-ES', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
             });
 
-            // Usar el número del documento tal como viene, sin modificaciones
-            let documentNumber = doc.number;
-            console.log('🔢 Número final a mostrar:', documentNumber);
-
-            // Determinar el contenido del documento
             let documentContent;
             if (doc.content && doc.content.trim() !== '') {
-                console.log('📄 Usando contenido personalizado');
                 documentContent = doc.content;
             } else {
-                console.log('📋 Usando contenido por defecto para tipo:', doc.type);
                 documentContent = getDefaultContent(doc.type);
             }
 
-            console.log('✅ Contenido final determinado:', documentContent.substring(0, 100) + '...');
-
-            const finalHTML = `
+            return `
                 <div style="text-align: right; margin-bottom: 30px;">
                     <strong>Quito, ${today}</strong>
                 </div>
                 
                 <div style="margin-bottom: 20px;">
-                    <strong>${documentNumber}</strong>
+                    <strong>${doc.number}</strong>
                 </div>
                 
                 ${doc.recipient ? `<div style="margin-bottom: 20px;"><strong>Para:</strong> ${doc.recipient}</div>` : ''}
@@ -1906,14 +2027,9 @@
                     </div>
                 </div>
             `;
-
-            console.log('🎯 HTML final generado, longitud:', finalHTML.length);
-            return finalHTML;
         }
 
         function getDefaultContent(documentType) {
-            console.log('🔍 Generando contenido para tipo:', documentType);
-            
             const defaultContent = {
                 'oficio': 'Estimado(a) señor(a),<br><br>Por medio del presente documento...<br><br>Atentamente,',
                 'memorando': 'Para: [Destinatario]<br>De: [Remitente]<br><br>Por medio del presente memorando...<br><br>Cordialmente,',
@@ -1924,10 +2040,7 @@
                 'acta_reunion': '<strong>ACTA DE REUNIÓN</strong><br><br><strong>Fecha:</strong> [fecha]<br><strong>Hora de inicio:</strong> [hora inicio]<br><strong>Hora de finalización:</strong> [hora fin]<br><strong>Lugar:</strong> [lugar de reunión]<br><br><strong>PARTICIPANTES:</strong><br>[Lista de participantes con nombres y cargos]<br><br><strong>TEMAS TRATADOS:</strong><br>1. [Tema 1]<br>2. [Tema 2]<br>3. [Tema 3]<br><br><strong>ACUERDOS Y COMPROMISOS:</strong><br>1. [Acuerdo 1 - Responsable - Fecha límite]<br>2. [Acuerdo 2 - Responsable - Fecha límite]<br><br><strong>PRÓXIMA REUNIÓN:</strong><br>Fecha: [fecha próxima reunión]<br>Hora: [hora]<br>Lugar: [lugar]<br><br>Levanta el acta: _____________________'
             };
             
-            const content = defaultContent[documentType] || 'Contenido del documento...';
-            console.log('✅ Contenido generado para', documentType, ':', content.substring(0, 100) + '...');
-            
-            return content;
+            return defaultContent[documentType] || 'Contenido del documento...';
         }
 
         function downloadWord() {
@@ -1968,22 +2081,14 @@ Firma y Sello
         }
 
         function getDefaultContentPlain(documentType) {
-            console.log('🔍 Generando contenido plano para descarga:', documentType);
-            
             const defaultContent = {
                 'oficio': 'Estimado(a) señor(a),\n\nPor medio del presente documento...\n\nAtentamente,',
                 'memorando': 'Para: [Destinatario]\nDe: [Remitente]\n\nPor medio del presente memorando...\n\nCordialmente,',
                 'orden_compra': 'Estimado proveedor,\n\nPor medio de la presente, solicitamos cotización para los siguientes productos/servicios:\n\n[Detalle de productos/servicios]\n\nFavor enviar cotización a la brevedad posible.\n\nAtentamente,',
-                'proforma': 'Estimado cliente,\n\nDe acuerdo a su solicitud, adjuntamos la proforma correspondiente:\n\n[Detalle de productos/servicios]\n\nLa presente proforma tiene una validez de 30 días.\n\nCordialmente,',
-                'acta_entrega_externa': 'ACTA DE ENTREGA-RECEPCIÓN EXTERNA\n\nEn la ciudad de Quito, siendo las [hora] del día [fecha], se procede a la entrega-recepción externa de:\n\nDETALLE DE LO ENTREGADO/RECIBIDO:\n[Describir detalladamente los elementos, documentos o bienes objeto de entrega-recepción]\n\nESTADO: ☐ Conforme     ☐ No conforme\n\nOBSERVACIONES:\n[Detallar cualquier observación relevante sobre el estado, condiciones o particularidades]\n\nFIRMAS:\n\nENTREGA: _____________________\nNombre: [Nombre completo]\nCargo: [Cargo]\n\nRECIBE: _____________________\nNombre: [Nombre completo]\nCargo: [Cargo]\n\nEMPRESA/ENTIDAD EXTERNA:\nNombre: _____________________\nRUC: _____________________\nRepresentante: _____________________',
-                'acta_entrega_interna': 'ACTA DE ENTREGA-RECEPCIÓN INTERNA\n\nEn la ciudad de Quito, siendo las [hora] del día [fecha], se procede a la entrega-recepción interna de:\n\nDETALLE DE LO ENTREGADO/RECIBIDO:\n[Describir detalladamente los elementos, documentos o bienes objeto de entrega-recepción]\n\nESTADO: ☐ Conforme     ☐ No conforme\n\nOBSERVACIONES:\n[Detallar cualquier observación relevante sobre el estado, condiciones o particularidades]\n\nFIRMAS:\n\nENTREGA: _____________________\nNombre: [Nombre completo]\nDepartamento: [Departamento que entrega]\nCargo: [Cargo]\n\nRECIBE: _____________________\nNombre: [Nombre completo]\nDepartamento: [Departamento que recibe]\nCargo: [Cargo]',
-                'acta_reunion': 'ACTA DE REUNIÓN\n\nFecha: [fecha]\nHora de inicio: [hora inicio]\nHora de finalización: [hora fin]\nLugar: [lugar de reunión]\n\nPARTICIPANTES:\n[Lista de participantes con nombres y cargos]\n\nTEMAS TRATADOS:\n1. [Tema 1]\n2. [Tema 2]\n3. [Tema 3]\n\nACUERDOS Y COMPROMISOS:\n1. [Acuerdo 1 - Responsable - Fecha límite]\n2. [Acuerdo 2 - Responsable - Fecha límite]\n\nPRÓXIMA REUNIÓN:\nFecha: [fecha próxima reunión]\nHora: [hora]\nLugar: [lugar]\n\nLevanta el acta: _____________________'
+                'proforma': 'Estimado cliente,\n\nDe acuerdo a su solicitud, adjuntamos la proforma correspondiente:\n\n[Detalle de productos/servicios]\n\nLa presente proforma tiene una validez de 30 días.\n\nCordialmente,'
             };
             
-            const content = defaultContent[documentType] || 'Contenido del documento...';
-            console.log('✅ Contenido plano generado para', documentType);
-            
-            return content;
+            return defaultContent[documentType] || 'Contenido del documento...';
         }
 
         function clearPreview() {
@@ -1992,19 +2097,13 @@ Firma y Sello
         }
 
         function refreshData() {
-            console.log('🔄 Actualizando datos...');
             loadStats();
             loadHistory();
             if (currentUser && currentUser.role === 'Administrador') {
                 loadCounters();
-                console.log('👨‍💼 Contadores de admin actualizados');
             }
             showAlert('Datos actualizados correctamente', 'success');
         }
-
-        // ================================
-        // FUNCIONES AUXILIARES
-        // ================================
 
         function setButtonLoading(buttonId, loading) {
             const button = document.getElementById(buttonId);
@@ -2059,11 +2158,10 @@ Firma y Sello
         // ================================
 
         window.addEventListener('load', function() {
-            console.log('🚀 Iniciando SINTEL...');
+            console.log('🚀 Iniciando SINTEL con funcionalidad de Excel...');
             
             // Verificar si hay sesión activa
             if (!checkSession()) {
-                // No hay sesión, mostrar login
                 document.getElementById('loginContainer').classList.remove('hidden');
                 document.getElementById('mainContainer').classList.add('hidden');
                 console.log('📋 Mostrando pantalla de login');
@@ -2093,7 +2191,7 @@ Firma y Sello
             }
         }, 30000);
 
-        console.log('✅ SINTEL cargado completamente');
+        console.log('✅ SINTEL con funcionalidad de Excel cargado completamente');
     </script>
 </body>
 </html>
