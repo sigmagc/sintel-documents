@@ -1226,83 +1226,147 @@
             }
         }
 
-        // Función para cargar historial de Excel
+        // Función para cargar historial de Excel - versión corregida
         async function loadExcelHistory() {
             try {
-                console.log('📊 Cargando historial desde Excel...');
+                console.log('📊 Iniciando carga de historial Excel...');
                 showAlert('Cargando historial de Excel...', 'info');
                 
-                // Importar SheetJS
-                const XLSX = await import('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
-                
-                // Leer el archivo Excel
+                // Leer el archivo Excel directamente con SheetJS
+                console.log('📁 Leyendo archivo historial.xlsx...');
                 const response = await window.fs.readFile('historial.xlsx');
-                const workbook = XLSX.read(response, {
+                console.log('✅ Archivo leído, tamaño:', response.length, 'bytes');
+                
+                // Importar SheetJS desde CDN
+                if (!window.XLSX) {
+                    console.log('📦 Cargando SheetJS...');
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                    document.head.appendChild(script);
+                    
+                    await new Promise((resolve, reject) => {
+                        script.onload = resolve;
+                        script.onerror = reject;
+                    });
+                    console.log('✅ SheetJS cargado');
+                }
+                
+                // Procesar el archivo Excel
+                console.log('📊 Procesando archivo Excel...');
+                const workbook = window.XLSX.read(response, {
                     cellDates: true,
-                    cellNF: true
+                    cellNF: true,
+                    type: 'array'
                 });
                 
-                // Obtener la primera hoja (SINTEL)
+                console.log('📋 Hojas encontradas:', workbook.SheetNames);
+                
+                // Obtener la hoja SINTEL
                 const worksheet = workbook.Sheets['SINTEL'];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                if (!worksheet) {
+                    throw new Error('No se encontró la hoja "SINTEL" en el archivo');
+                }
                 
-                console.log('📄 Datos leídos del Excel:', jsonData.length, 'filas');
+                // Convertir a JSON
+                const jsonData = window.XLSX.utils.sheet_to_json(worksheet, { 
+                    header: 1,
+                    defval: '',
+                    blankrows: false
+                });
                 
-                // Encontrar la fila de headers (que empieza con "Fecha")
+                console.log('📄 Datos extraídos:', jsonData.length, 'filas');
+                
+                // Encontrar la fila de headers
                 let headerRowIndex = -1;
                 for (let i = 0; i < jsonData.length; i++) {
-                    if (jsonData[i][0] === 'Fecha') {
+                    if (jsonData[i] && jsonData[i][0] === 'Fecha') {
                         headerRowIndex = i;
                         break;
                     }
                 }
                 
                 if (headerRowIndex === -1) {
-                    throw new Error('No se encontró la fila de encabezados');
+                    throw new Error('No se encontró la fila de encabezados (debe empezar con "Fecha")');
                 }
                 
                 console.log('📋 Headers encontrados en fila:', headerRowIndex + 1);
                 const headers = jsonData[headerRowIndex];
                 console.log('📋 Headers:', headers);
                 
-                // Procesar datos desde la fila siguiente a los headers
+                // Procesar datos
                 excelHistoryData = [];
+                let validRows = 0;
+                
                 for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
                     const row = jsonData[i];
                     
-                    // Saltar filas vacías o incompletas
-                    if (!row || !row[0] || !row[1]) continue;
+                    // Verificar que la fila tenga datos válidos
+                    if (!row || !row[0] || !row[1] || row[0] === '' || row[1] === '') {
+                        continue;
+                    }
                     
-                    const document = {
-                        id: i - headerRowIndex,
-                        fecha: row[0] instanceof Date ? row[0] : new Date(row[0]),
-                        descripcion: row[1] || '',
-                        entidad: row[2] || '',
-                        contacto: row[3] || '',
-                        numero_oficio: row[4] || '',
-                        source: 'excel'
-                    };
-                    
-                    excelHistoryData.push(document);
+                    try {
+                        let fecha;
+                        if (row[0] instanceof Date) {
+                            fecha = row[0];
+                        } else if (typeof row[0] === 'string') {
+                            fecha = new Date(row[0]);
+                        } else {
+                            // Si es un número de Excel, convertir
+                            fecha = window.XLSX.SSF.parse_date_code(row[0]);
+                            fecha = new Date(fecha.y, fecha.m - 1, fecha.d);
+                        }
+                        
+                        const document = {
+                            id: validRows + 1,
+                            fecha: fecha,
+                            descripcion: (row[1] || '').toString().trim(),
+                            entidad: (row[2] || '').toString().trim(),
+                            contacto: (row[3] || '').toString().trim(),
+                            numero_oficio: (row[4] || '').toString().trim(),
+                            source: 'excel'
+                        };
+                        
+                        // Solo agregar si tiene información mínima
+                        if (document.descripcion || document.numero_oficio) {
+                            excelHistoryData.push(document);
+                            validRows++;
+                        }
+                        
+                    } catch (dateError) {
+                        console.warn('⚠️ Error procesando fila', i + 1, ':', dateError.message);
+                        continue;
+                    }
                 }
                 
-                console.log('✅ Documentos procesados del Excel:', excelHistoryData.length);
+                console.log('✅ Documentos válidos procesados:', validRows);
                 
-                // Mostrar los datos del Excel en la tabla
+                if (validRows === 0) {
+                    throw new Error('No se encontraron documentos válidos en el archivo');
+                }
+                
+                // Mostrar en la tabla
                 showingExcelHistory = true;
                 updateHistoryTableWithExcel(excelHistoryData);
                 updateHistoryInfo(excelHistoryData.length, 'Excel');
                 
-                // Actualizar el texto del botón
-                const excelBtn = document.querySelector('.excel-btn');
-                excelBtn.textContent = '📋 Volver al Historial Normal';
-                excelBtn.onclick = () => returnToNormalHistory();
+                // Cambiar el botón
+                const excelBtns = document.querySelectorAll('.excel-btn');
+                excelBtns.forEach(btn => {
+                    btn.textContent = '📋 Volver al Historial Normal';
+                    btn.onclick = () => returnToNormalHistory();
+                });
                 
-                showAlert(`Historial de Excel cargado: ${excelHistoryData.length} documentos`, 'success');
+                showAlert(`✅ Historial de Excel cargado: ${excelHistoryData.length} documentos`, 'success');
+                console.log('🎉 Carga de Excel completada exitosamente');
                 
             } catch (error) {
                 console.error('❌ Error cargando historial de Excel:', error);
-                showAlert('Error cargando historial de Excel: ' + error.message, 'error');
+                showAlert('❌ Error: ' + error.message, 'error');
+                
+                // Resetear estado en caso de error
+                showingExcelHistory = false;
+                excelHistoryData = [];
             }
         }
 
