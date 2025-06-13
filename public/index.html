@@ -1252,25 +1252,31 @@
         // Funciones mock para testing
         function loadMockStats() {
             console.log('📊 Cargando estadísticas mock...');
+            console.log('📄 Total documentos mock:', mockDocuments.length);
+            
             const totalDocs = mockDocuments.length;
             const today = new Date().toDateString();
             const todayDocs = mockDocuments.filter(doc => 
                 new Date(doc.created_date).toDateString() === today
             ).length;
-            const departments = new Set(mockDocuments.map(doc => doc.department)).size;
+            const departments = mockDocuments.length > 0 ? 
+                new Set(mockDocuments.map(doc => doc.department)).size : 0;
             
             document.getElementById('totalDocuments').textContent = totalDocs;
             document.getElementById('todayDocuments').textContent = todayDocs;
-            document.getElementById('activeDepartments').textContent = departments || 1;
+            document.getElementById('activeDepartments').textContent = departments;
             
             console.log('✅ Estadísticas actualizadas:', { totalDocs, todayDocs, departments });
         }
 
         function loadMockHistory() {
             console.log('📚 Cargando historial mock...');
+            console.log('📄 Documentos a mostrar:', mockDocuments.length);
+            
             allDocuments = [...mockDocuments]; // Copiar documentos mock
             updateHistoryTable(allDocuments);
             updateHistoryInfo(allDocuments.length);
+            
             console.log('✅ Historial actualizado con', allDocuments.length, 'documentos');
         }
 
@@ -1476,29 +1482,44 @@
             }
             
             console.log('🗑️ Eliminando todos los documentos (modo mock)...');
+            console.log('📊 Documentos antes de eliminar:', mockDocuments.length);
+            console.log('🔢 Contadores antes de eliminar:', mockCounters);
             
             try {
                 // Simular eliminación
                 const deletedCount = mockDocuments.length;
-                mockDocuments = [];
-                mockCounters = {};
-                documentCounter = 1;
+                
+                // Limpiar arrays y contadores
+                mockDocuments.length = 0; // Vaciar el array
+                allDocuments.length = 0;  // Vaciar también allDocuments
+                mockCounters = {};        // Reiniciar contadores
+                documentCounter = 1;      // Reiniciar contador de IDs
+                
+                console.log('📊 Documentos después de eliminar:', mockDocuments.length);
+                console.log('🔢 Contadores después de eliminar:', mockCounters);
                 
                 const result = {
                     success: true,
-                    message: `Se eliminaron ${deletedCount} documentos correctamente`
+                    message: `Se eliminaron ${deletedCount} documentos correctamente y se reiniciaron todos los contadores`
                 };
                 
                 if (result.success) {
                     showAlert(result.message, 'success');
+                    
+                    // Actualizar todas las vistas
                     loadMockStats();
                     loadMockHistory();
                     loadMockCounters();
-                    console.log('✅ Todos los documentos eliminados');
+                    
+                    // Limpiar vista previa si existe
+                    clearPreview();
+                    
+                    console.log('✅ Todos los documentos eliminados y vistas actualizadas');
+                    updateStatus('🟢 Todos los documentos eliminados correctamente', 'success');
                 }
             } catch (error) {
                 console.error('❌ Error eliminando documentos:', error);
-                showAlert('Error eliminando documentos', 'error');
+                showAlert('Error eliminando documentos: ' + error.message, 'error');
             }
         }
 
