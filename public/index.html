@@ -1162,11 +1162,19 @@
             const mockCounter = Math.floor(Math.random() * 100) + 1;
             const mapping = documentTypeMapping[type];
             
+            console.log('🔢 Generando número para tipo:', type);
+            console.log('🗂️ Mapeo encontrado:', mapping);
+            
             if (mapping && mapping.prefix) {
-                return `${mapping.prefix} ${department}-${String(mockCounter).padStart(3, '0')}-${year}`;
+                const documentNumber = `${mapping.prefix} ${department}-${String(mockCounter).padStart(3, '0')}-${year}`;
+                console.log('✅ Número generado:', documentNumber);
+                return documentNumber;
             }
             
-            return `Documento No. ${department}-${String(mockCounter).padStart(3, '0')}-${year}`;
+            // Fallback
+            const fallbackNumber = `Documento No. ${department}-${String(mockCounter).padStart(3, '0')}-${year}`;
+            console.log('⚠️ Usando fallback:', fallbackNumber);
+            return fallbackNumber;
         }
 
         async function previewNext() {
@@ -1276,15 +1284,9 @@
                 const row = tbody.insertRow();
                 const date = new Date(doc.created_date).toLocaleString('es-ES');
                 
-                // Corregir el número del documento si viene con formato incorrecto
+                // Usar el número del documento tal como está almacenado
                 let documentNumber = doc.document_number;
-                if (documentNumber && documentNumber.startsWith('Documento No.') && doc.document_type) {
-                    const mapping = documentTypeMapping[doc.document_type];
-                    if (mapping && mapping.prefix) {
-                        // Reemplazar "Documento No." con el prefijo correcto
-                        documentNumber = documentNumber.replace('Documento No.', mapping.prefix);
-                    }
-                }
+                console.log('📋 Mostrando documento en historial:', documentNumber);
                 
                 // Asegurar que se muestre el nombre correcto del tipo de documento
                 let documentTypeName;
@@ -1672,6 +1674,7 @@
         function createDocumentHTML(doc) {
             console.log('🎨 Creando HTML para documento:', doc);
             console.log('📝 Tipo de documento:', doc.type);
+            console.log('🔢 Número recibido:', doc.number);
             
             const today = new Date().toLocaleDateString('es-ES', {
                 year: 'numeric',
@@ -1679,17 +1682,9 @@
                 day: 'numeric'
             });
 
-            // Corregir el número del documento si viene con formato incorrecto
+            // Usar el número del documento tal como viene, sin modificaciones
             let documentNumber = doc.number;
-            if (documentNumber && documentNumber.startsWith('Documento No.') && doc.type) {
-                const mapping = documentTypeMapping[doc.type];
-                if (mapping && mapping.prefix) {
-                    // Reemplazar "Documento No." con el prefijo correcto
-                    documentNumber = documentNumber.replace('Documento No.', mapping.prefix);
-                }
-            }
-
-            console.log('🔢 Número de documento final:', documentNumber);
+            console.log('🔢 Número final a mostrar:', documentNumber);
 
             // Determinar el contenido del documento
             let documentContent;
