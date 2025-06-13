@@ -1489,17 +1489,22 @@
         }
 
         function getDefaultContent(documentType) {
+            console.log('🔍 Generando contenido para tipo:', documentType);
+            
             const defaultContent = {
                 'oficio': 'Estimado(a) señor(a),<br><br>Por medio del presente documento...<br><br>Atentamente,',
                 'memorando': 'Para: [Destinatario]<br>De: [Remitente]<br><br>Por medio del presente memorando...<br><br>Cordialmente,',
                 'orden_compra': 'Estimado proveedor,<br><br>Por medio de la presente, solicitamos cotización para los siguientes productos/servicios:<br><br>[Detalle de productos/servicios]<br><br>Favor enviar cotización a la brevedad posible.<br><br>Atentamente,',
                 'proforma': 'Estimado cliente,<br><br>De acuerdo a su solicitud, adjuntamos la proforma correspondiente:<br><br>[Detalle de productos/servicios]<br><br>La presente proforma tiene una validez de 30 días.<br><br>Cordialmente,',
-                'acta_entrega_externa': 'ACTA DE ENTREGA-RECEPCIÓN EXTERNA<br><br>En la ciudad de Quito, siendo las [hora] del día [fecha], se procede a la entrega-recepción externa de:<br><br>[Detalle de lo entregado/recibido]<br><br>ESTADO: Conforme / No conforme<br><br>OBSERVACIONES:<br>[Detallar cualquier observación relevante]<br><br>ENTREGA: _____________________<br>RECIBE: _____________________<br><br>EMPRESA/ENTIDAD EXTERNA: _____________________',
-                'acta_entrega_interna': 'ACTA DE ENTREGA-RECEPCIÓN INTERNA<br><br>En la ciudad de Quito, siendo las [hora] del día [fecha], se procede a la entrega-recepción interna de:<br><br>[Detalle de lo entregado/recibido]<br><br>ESTADO: Conforme / No conforme<br><br>OBSERVACIONES:<br>[Detallar cualquier observación relevante]<br><br>ENTREGA: _____________________<br>Departamento: [Departamento que entrega]<br><br>RECIBE: _____________________<br>Departamento: [Departamento que recibe]',
-                'acta_reunion': 'ACTA DE REUNIÓN<br><br>Fecha: [fecha]<br>Hora de inicio: [hora inicio]<br>Hora de finalización: [hora fin]<br>Lugar: [lugar de reunión]<br><br><strong>PARTICIPANTES:</strong><br>[Lista de participantes]<br><br><strong>TEMAS TRATADOS:</strong><br>1. [Tema 1]<br>2. [Tema 2]<br>3. [Tema 3]<br><br><strong>ACUERDOS Y COMPROMISOS:</strong><br>1. [Acuerdo 1 - Responsable - Fecha límite]<br>2. [Acuerdo 2 - Responsable - Fecha límite]<br><br><strong>PRÓXIMA REUNIÓN:</strong><br>Fecha: [fecha próxima reunión]<br>Hora: [hora]<br>Lugar: [lugar]<br><br>Levanta el acta: _____________________'
+                'acta_entrega_externa': '<strong>ACTA DE ENTREGA-RECEPCIÓN EXTERNA</strong><br><br>En la ciudad de Quito, siendo las <strong>[hora]</strong> del día <strong>[fecha]</strong>, se procede a la entrega-recepción externa de:<br><br><strong>DETALLE DE LO ENTREGADO/RECIBIDO:</strong><br>[Describir detalladamente los elementos, documentos o bienes objeto de entrega-recepción]<br><br><strong>ESTADO:</strong> ☐ Conforme &nbsp;&nbsp;&nbsp; ☐ No conforme<br><br><strong>OBSERVACIONES:</strong><br>[Detallar cualquier observación relevante sobre el estado, condiciones o particularidades]<br><br><strong>FIRMAS:</strong><br><br>ENTREGA: _____________________<br>Nombre: [Nombre completo]<br>Cargo: [Cargo]<br><br>RECIBE: _____________________<br>Nombre: [Nombre completo]<br>Cargo: [Cargo]<br><br><strong>EMPRESA/ENTIDAD EXTERNA:</strong><br>Nombre: _____________________<br>RUC: _____________________<br>Representante: _____________________',
+                'acta_entrega_interna': '<strong>ACTA DE ENTREGA-RECEPCIÓN INTERNA</strong><br><br>En la ciudad de Quito, siendo las <strong>[hora]</strong> del día <strong>[fecha]</strong>, se procede a la entrega-recepción interna de:<br><br><strong>DETALLE DE LO ENTREGADO/RECIBIDO:</strong><br>[Describir detalladamente los elementos, documentos o bienes objeto de entrega-recepción]<br><br><strong>ESTADO:</strong> ☐ Conforme &nbsp;&nbsp;&nbsp; ☐ No conforme<br><br><strong>OBSERVACIONES:</strong><br>[Detallar cualquier observación relevante sobre el estado, condiciones o particularidades]<br><br><strong>FIRMAS:</strong><br><br>ENTREGA: _____________________<br>Nombre: [Nombre completo]<br>Departamento: <strong>[Departamento que entrega]</strong><br>Cargo: [Cargo]<br><br>RECIBE: _____________________<br>Nombre: [Nombre completo]<br>Departamento: <strong>[Departamento que recibe]</strong><br>Cargo: [Cargo]',
+                'acta_reunion': '<strong>ACTA DE REUNIÓN</strong><br><br><strong>Fecha:</strong> [fecha]<br><strong>Hora de inicio:</strong> [hora inicio]<br><strong>Hora de finalización:</strong> [hora fin]<br><strong>Lugar:</strong> [lugar de reunión]<br><br><strong>PARTICIPANTES:</strong><br>[Lista de participantes con nombres y cargos]<br><br><strong>TEMAS TRATADOS:</strong><br>1. [Tema 1]<br>2. [Tema 2]<br>3. [Tema 3]<br><br><strong>ACUERDOS Y COMPROMISOS:</strong><br>1. [Acuerdo 1 - Responsable - Fecha límite]<br>2. [Acuerdo 2 - Responsable - Fecha límite]<br><br><strong>PRÓXIMA REUNIÓN:</strong><br>Fecha: [fecha próxima reunión]<br>Hora: [hora]<br>Lugar: [lugar]<br><br>Levanta el acta: _____________________'
             };
             
-            return defaultContent[documentType] || 'Contenido del documento...';
+            const content = defaultContent[documentType] || 'Contenido del documento...';
+            console.log('✅ Contenido generado para', documentType, ':', content.substring(0, 100) + '...');
+            
+            return content;
         }
 
         function downloadWord() {
@@ -1540,17 +1545,22 @@ Firma y Sello
         }
 
         function getDefaultContentPlain(documentType) {
+            console.log('🔍 Generando contenido plano para descarga:', documentType);
+            
             const defaultContent = {
                 'oficio': 'Estimado(a) señor(a),\n\nPor medio del presente documento...\n\nAtentamente,',
                 'memorando': 'Para: [Destinatario]\nDe: [Remitente]\n\nPor medio del presente memorando...\n\nCordialmente,',
                 'orden_compra': 'Estimado proveedor,\n\nPor medio de la presente, solicitamos cotización para los siguientes productos/servicios:\n\n[Detalle de productos/servicios]\n\nFavor enviar cotización a la brevedad posible.\n\nAtentamente,',
                 'proforma': 'Estimado cliente,\n\nDe acuerdo a su solicitud, adjuntamos la proforma correspondiente:\n\n[Detalle de productos/servicios]\n\nLa presente proforma tiene una validez de 30 días.\n\nCordialmente,',
-                'acta_entrega_externa': 'ACTA DE ENTREGA-RECEPCIÓN EXTERNA\n\nEn la ciudad de Quito, siendo las [hora] del día [fecha], se procede a la entrega-recepción externa de:\n\n[Detalle de lo entregado/recibido]\n\nESTADO: Conforme / No conforme\n\nOBSERVACIONES:\n[Detallar cualquier observación relevante]\n\nENTREGA: _____________________\nRECIBE: _____________________\n\nEMPRESA/ENTIDAD EXTERNA: _____________________',
-                'acta_entrega_interna': 'ACTA DE ENTREGA-RECEPCIÓN INTERNA\n\nEn la ciudad de Quito, siendo las [hora] del día [fecha], se procede a la entrega-recepción interna de:\n\n[Detalle de lo entregado/recibido]\n\nESTADO: Conforme / No conforme\n\nOBSERVACIONES:\n[Detallar cualquier observación relevante]\n\nENTREGA: _____________________\nDepartamento: [Departamento que entrega]\n\nRECIBE: _____________________\nDepartamento: [Departamento que recibe]',
-                'acta_reunion': 'ACTA DE REUNIÓN\n\nFecha: [fecha]\nHora de inicio: [hora inicio]\nHora de finalización: [hora fin]\nLugar: [lugar de reunión]\n\nPARTICIPANTES:\n[Lista de participantes]\n\nTEMAS TRATADOS:\n1. [Tema 1]\n2. [Tema 2]\n3. [Tema 3]\n\nACUERDOS Y COMPROMISOS:\n1. [Acuerdo 1 - Responsable - Fecha límite]\n2. [Acuerdo 2 - Responsable - Fecha límite]\n\nPRÓXIMA REUNIÓN:\nFecha: [fecha próxima reunión]\nHora: [hora]\nLugar: [lugar]\n\nLevanta el acta: _____________________'
+                'acta_entrega_externa': 'ACTA DE ENTREGA-RECEPCIÓN EXTERNA\n\nEn la ciudad de Quito, siendo las [hora] del día [fecha], se procede a la entrega-recepción externa de:\n\nDETALLE DE LO ENTREGADO/RECIBIDO:\n[Describir detalladamente los elementos, documentos o bienes objeto de entrega-recepción]\n\nESTADO: ☐ Conforme     ☐ No conforme\n\nOBSERVACIONES:\n[Detallar cualquier observación relevante sobre el estado, condiciones o particularidades]\n\nFIRMAS:\n\nENTREGA: _____________________\nNombre: [Nombre completo]\nCargo: [Cargo]\n\nRECIBE: _____________________\nNombre: [Nombre completo]\nCargo: [Cargo]\n\nEMPRESA/ENTIDAD EXTERNA:\nNombre: _____________________\nRUC: _____________________\nRepresentante: _____________________',
+                'acta_entrega_interna': 'ACTA DE ENTREGA-RECEPCIÓN INTERNA\n\nEn la ciudad de Quito, siendo las [hora] del día [fecha], se procede a la entrega-recepción interna de:\n\nDETALLE DE LO ENTREGADO/RECIBIDO:\n[Describir detalladamente los elementos, documentos o bienes objeto de entrega-recepción]\n\nESTADO: ☐ Conforme     ☐ No conforme\n\nOBSERVACIONES:\n[Detallar cualquier observación relevante sobre el estado, condiciones o particularidades]\n\nFIRMAS:\n\nENTREGA: _____________________\nNombre: [Nombre completo]\nDepartamento: [Departamento que entrega]\nCargo: [Cargo]\n\nRECIBE: _____________________\nNombre: [Nombre completo]\nDepartamento: [Departamento que recibe]\nCargo: [Cargo]',
+                'acta_reunion': 'ACTA DE REUNIÓN\n\nFecha: [fecha]\nHora de inicio: [hora inicio]\nHora de finalización: [hora fin]\nLugar: [lugar de reunión]\n\nPARTICIPANTES:\n[Lista de participantes con nombres y cargos]\n\nTEMAS TRATADOS:\n1. [Tema 1]\n2. [Tema 2]\n3. [Tema 3]\n\nACUERDOS Y COMPROMISOS:\n1. [Acuerdo 1 - Responsable - Fecha límite]\n2. [Acuerdo 2 - Responsable - Fecha límite]\n\nPRÓXIMA REUNIÓN:\nFecha: [fecha próxima reunión]\nHora: [hora]\nLugar: [lugar]\n\nLevanta el acta: _____________________'
             };
             
-            return defaultContent[documentType] || 'Contenido del documento...';
+            const content = defaultContent[documentType] || 'Contenido del documento...';
+            console.log('✅ Contenido plano generado para', documentType);
+            
+            return content;
         }
 
         function clearPreview() {
