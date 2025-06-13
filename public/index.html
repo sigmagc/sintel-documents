@@ -935,12 +935,16 @@
             // Configurar permisos
             setupPermissions();
             
-            // Inicializar documentos de ejemplo si no existen
-            if (mockDocuments.length === 0) {
+            // Inicializar documentos de ejemplo solo SI NO EXISTEN YA
+            // Esto es importante para mantener la persistencia entre usuarios
+            if (mockDocuments.length === 0 && Object.keys(mockCounters).length === 0) {
                 initializeMockDocuments();
+                console.log('🔄 Documentos inicializados por primera vez');
+            } else {
+                console.log('📚 Usando documentos existentes:', mockDocuments.length);
             }
             
-            // Cargar datos
+            // Cargar datos (siempre carga todos los documentos, sin importar el usuario)
             loadStats();
             loadHistory();
             
@@ -1143,13 +1147,16 @@
                         recipient: documentData.recipient,
                         content: documentData.content,
                         created_date: new Date().toISOString(),
+                        created_by: currentUser.username, // Rastrear quién creó el documento
+                        created_by_role: currentUser.role,
                         status: 'Activo'
                     };
                     
                     mockDocuments.unshift(mockDoc); // Agregar al inicio del array
                     
                     // Actualizar contador mock (ya se actualizó en generateMockDocumentNumber)
-                    console.log('📚 Documento agregado al historial mock:', mockDoc);
+                    console.log('📚 Documento agregado al historial mock por:', currentUser.username);
+                    console.log('📄 Total documentos en sistema:', mockDocuments.length);
                     console.log('🔢 Estado actual de contadores:', mockCounters);
 
                     // Mostrar vista previa
@@ -1281,60 +1288,32 @@
         }
 
         async function loadStats() {
-            if (mockDocuments.length > 0) {
-                // Si tenemos documentos mock, usar esos
-                loadMockStats();
-                return;
-            }
-            
-            try {
-                const stats = await apiCall('/stats');
-                document.getElementById('totalDocuments').textContent = stats.totalDocuments;
-                document.getElementById('todayDocuments').textContent = stats.todayDocuments;
-                document.getElementById('activeDepartments').textContent = stats.activeDepartments;
-            } catch (error) {
-                console.error('Error cargando estadísticas:', error);
-                // Usar valores por defecto
-                document.getElementById('totalDocuments').textContent = '0';
-                document.getElementById('todayDocuments').textContent = '0';
-                document.getElementById('activeDepartments').textContent = '0';
-            }
+            // SIEMPRE usar documentos mock, sin importar el usuario
+            console.log('📊 Cargando estadísticas para usuario:', currentUser.username);
+            loadMockStats();
         }
 
         async function loadHistory() {
-            if (mockDocuments.length > 0) {
-                // Si tenemos documentos mock, usar esos
-                loadMockHistory();
-                return;
-            }
-            
-            try {
-                const documents = await apiCall('/documents');
-                allDocuments = documents; // Guardar todos los documentos
-                updateHistoryTable(documents);
-                updateHistoryInfo(documents.length);
-            } catch (error) {
-                console.error('Error cargando historial:', error);
-                document.getElementById('historyTable').innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align: center; color: #e74c3c;">
-                            Error cargando historial - Usando modo demo
-                        </td>
-                    </tr>
-                `;
-                updateHistoryInfo(0);
-            }
+            // SIEMPRE usar documentos mock, sin importar el usuario
+            console.log('📚 Cargando historial para usuario:', currentUser.username);
+            loadMockHistory();
         }
 
         function updateHistoryTable(documents) {
             const tbody = document.getElementById('historyTable');
             const isAdmin = currentUser && currentUser.role === 'Administrador';
             
+            console.log('🔄 Actualizando tabla del historial con', documents.length, 'documentos');
+            
             if (documents.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #7f8c8d;">
-                            No hay documentos que coincidan con los filtros
+                        <td colspan="7" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                            <div style="font-size: 1.2em; margin-bottom: 10px;">📄</div>
+                            <div>No hay documentos en el sistema</div>
+                            <div style="font-size: 0.9em; margin-top: 5px; opacity: 0.7;">
+                                Genera tu primer documento usando el formulario de arriba
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -1379,6 +1358,8 @@
                     ${actionsCell}
                 `;
             });
+            
+            console.log('✅ Tabla del historial actualizada');
         }
 
         // ================================
@@ -1481,32 +1462,41 @@
                 return;
             }
             
-            console.log('🗑️ Eliminando todos los documentos (modo mock)...');
-            console.log('📊 Documentos antes de eliminar:', mockDocuments.length);
+            console.log('🗑️ Eliminando TODOS los documentos del sistema (sin importar usuario)...');
+            console.log('📊 Documentos totales antes de eliminar:', mockDocuments.length);
             console.log('🔢 Contadores antes de eliminar:', mockCounters);
             
+            // Mostrar lista de documentos que se van a eliminar
+            if (mockDocuments.length > 0) {
+                console.log('📄 Documentos a eliminar:');
+                mockDocuments.forEach((doc, index) => {
+                    console.log(`  ${index + 1}. ${doc.document_number} - ${doc.subject}`);
+                });
+            }
+            
             try {
-                // Simular eliminación
+                // Simular eliminación COMPLETA
                 const deletedCount = mockDocuments.length;
                 
-                // Limpiar arrays y contadores
-                mockDocuments.length = 0; // Vaciar el array
-                allDocuments.length = 0;  // Vaciar también allDocuments
-                mockCounters = {};        // Reiniciar contadores
-                documentCounter = 1;      // Reiniciar contador de IDs
+                // Limpiar TODOS los arrays y contadores globalmente
+                mockDocuments.splice(0, mockDocuments.length); // Vaciar completamente el array
+                allDocuments.splice(0, allDocuments.length);   // Vaciar también allDocuments
+                mockCounters = {};                              // Reiniciar contadores
+                documentCounter = 1;                            // Reiniciar contador de IDs
                 
                 console.log('📊 Documentos después de eliminar:', mockDocuments.length);
                 console.log('🔢 Contadores después de eliminar:', mockCounters);
+                console.log('🆔 Contador de IDs reiniciado a:', documentCounter);
                 
                 const result = {
                     success: true,
-                    message: `Se eliminaron ${deletedCount} documentos correctamente y se reiniciaron todos los contadores`
+                    message: `Se eliminaron ${deletedCount} documentos de todos los usuarios y se reiniciaron todos los contadores`
                 };
                 
                 if (result.success) {
                     showAlert(result.message, 'success');
                     
-                    // Actualizar todas las vistas
+                    // Actualizar TODAS las vistas para TODOS los usuarios
                     loadMockStats();
                     loadMockHistory();
                     loadMockCounters();
@@ -1514,8 +1504,12 @@
                     // Limpiar vista previa si existe
                     clearPreview();
                     
-                    console.log('✅ Todos los documentos eliminados y vistas actualizadas');
-                    updateStatus('🟢 Todos los documentos eliminados correctamente', 'success');
+                    // Limpiar filtros
+                    document.getElementById('filterType').value = '';
+                    document.getElementById('filterDepartment').value = '';
+                    
+                    console.log('✅ TODOS los documentos eliminados y vistas actualizadas');
+                    updateStatus('🟢 Sistema reiniciado - Todos los documentos eliminados', 'success');
                 }
             } catch (error) {
                 console.error('❌ Error eliminando documentos:', error);
