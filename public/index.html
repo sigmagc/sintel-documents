@@ -1028,18 +1028,27 @@
 
                 setButtonLoading('generateBtn', true);
                 
+                const documentType = document.getElementById('documentType').value;
+                console.log('🔍 Tipo de documento seleccionado:', documentType);
+                
                 const documentData = {
-                    type: document.getElementById('documentType').value,
+                    type: documentType,
                     department: document.getElementById('department').value,
                     subject: subject,
                     recipient: document.getElementById('recipient').value,
                     content: document.getElementById('content').value
                 };
 
-                const result = await apiCall('/generate-document', {
-                    method: 'POST',
-                    body: JSON.stringify(documentData)
-                });
+                console.log('📋 Datos del documento:', documentData);
+
+                // Simulamos la respuesta del API para testing
+                const result = {
+                    success: true,
+                    documentNumber: generateMockDocumentNumber(documentType, documentData.department),
+                    message: 'Documento generado exitosamente'
+                };
+
+                console.log('✅ Resultado simulado:', result);
 
                 if (result.success) {
                     currentDocument = {
@@ -1048,9 +1057,13 @@
                         date: new Date().toLocaleString('es-ES')
                     };
 
+                    console.log('📄 Documento actual creado:', currentDocument);
+
                     // Mostrar vista previa
                     document.getElementById('generatedNumber').textContent = result.documentNumber;
-                    document.getElementById('documentContent').innerHTML = createDocumentHTML(currentDocument);
+                    const htmlContent = createDocumentHTML(currentDocument);
+                    console.log('🎨 HTML generado:', htmlContent.substring(0, 200) + '...');
+                    document.getElementById('documentContent').innerHTML = htmlContent;
                     document.getElementById('documentPreview').style.display = 'block';
 
                     showAlert(result.message, 'success');
@@ -1061,18 +1074,32 @@
                     document.getElementById('recipient').value = '';
                     document.getElementById('content').value = '';
 
-                    // Actualizar datos
-                    loadStats();
-                    loadHistory();
-                    if (currentUser.role === 'Administrador') {
-                        loadCounters();
-                    }
+                    // Actualizar datos (comentado para testing)
+                    // loadStats();
+                    // loadHistory();
+                    // if (currentUser.role === 'Administrador') {
+                    //     loadCounters();
+                    // }
                 }
             } catch (error) {
-                showAlert('Error generando documento', 'error');
+                console.error('❌ Error generando documento:', error);
+                showAlert('Error generando documento: ' + error.message, 'error');
             } finally {
                 setButtonLoading('generateBtn', false);
             }
+        }
+
+        // Función auxiliar para generar número de documento mock
+        function generateMockDocumentNumber(type, department) {
+            const year = new Date().getFullYear();
+            const mockCounter = Math.floor(Math.random() * 100) + 1;
+            const mapping = documentTypeMapping[type];
+            
+            if (mapping && mapping.prefix) {
+                return `${mapping.prefix} ${department}-${String(mockCounter).padStart(3, '0')}-${year}`;
+            }
+            
+            return `Documento No. ${department}-${String(mockCounter).padStart(3, '0')}-${year}`;
         }
 
         async function previewNext() {
@@ -1445,6 +1472,9 @@
         // ================================
 
         function createDocumentHTML(doc) {
+            console.log('🎨 Creando HTML para documento:', doc);
+            console.log('📝 Tipo de documento:', doc.type);
+            
             const today = new Date().toLocaleDateString('es-ES', {
                 year: 'numeric',
                 month: 'long',
@@ -1461,7 +1491,21 @@
                 }
             }
 
-            return `
+            console.log('🔢 Número de documento final:', documentNumber);
+
+            // Determinar el contenido del documento
+            let documentContent;
+            if (doc.content && doc.content.trim() !== '') {
+                console.log('📄 Usando contenido personalizado');
+                documentContent = doc.content;
+            } else {
+                console.log('📋 Usando contenido por defecto para tipo:', doc.type);
+                documentContent = getDefaultContent(doc.type);
+            }
+
+            console.log('✅ Contenido final determinado:', documentContent.substring(0, 100) + '...');
+
+            const finalHTML = `
                 <div style="text-align: right; margin-bottom: 30px;">
                     <strong>Quito, ${today}</strong>
                 </div>
@@ -1477,7 +1521,7 @@
                 </div>
                 
                 <div style="margin-bottom: 30px; text-align: justify; line-height: 1.6;">
-                    ${doc.content || getDefaultContent(doc.type)}
+                    ${documentContent}
                 </div>
                 
                 <div style="margin-top: 80px;">
@@ -1486,6 +1530,9 @@
                     </div>
                 </div>
             `;
+
+            console.log('🎯 HTML final generado, longitud:', finalHTML.length);
+            return finalHTML;
         }
 
         function getDefaultContent(documentType) {
