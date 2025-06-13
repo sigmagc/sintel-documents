@@ -832,6 +832,8 @@
         let currentDocument = null;
         let currentUser = null;
         let allDocuments = []; // Almacenar todos los documentos para filtrado
+        let mockDocuments = []; // Documentos simulados para testing
+        let documentCounter = 1; // Contador para documentos mock
 
         // Usuarios del sistema
         const users = {
@@ -932,11 +934,50 @@
             // Configurar permisos
             setupPermissions();
             
+            // Inicializar documentos de ejemplo si no existen
+            if (mockDocuments.length === 0) {
+                initializeMockDocuments();
+            }
+            
             // Cargar datos
             loadStats();
             loadHistory();
             
             console.log('✅ Aplicación cargada para:', currentUser.role);
+        }
+
+        function initializeMockDocuments() {
+            console.log('🔄 Inicializando documentos de ejemplo...');
+            
+            const exampleDocs = [
+                {
+                    id: 1,
+                    document_number: 'Oficio No. GGE-001-2025',
+                    document_type: 'oficio',
+                    department: 'GGE',
+                    subject: 'Convocatoria a reunión de directorio',
+                    recipient: 'Junta Directiva',
+                    content: '',
+                    created_date: new Date(Date.now() - 86400000).toISOString(), // Ayer
+                    status: 'Activo'
+                },
+                {
+                    id: 2,
+                    document_number: 'Memorando No. RHU-003-2025',
+                    document_type: 'memorando',
+                    department: 'RHU',
+                    subject: 'Políticas de trabajo remoto',
+                    recipient: 'Todo el personal',
+                    content: '',
+                    created_date: new Date(Date.now() - 172800000).toISOString(), // Hace 2 días
+                    status: 'Activo'
+                }
+            ];
+            
+            mockDocuments = [...exampleDocs];
+            documentCounter = exampleDocs.length + 1;
+            
+            console.log('✅ Documentos de ejemplo inicializados:', mockDocuments.length);
         }
 
         function setupPermissions() {
@@ -1059,6 +1100,22 @@
 
                     console.log('📄 Documento actual creado:', currentDocument);
 
+                    // Agregar al historial mock
+                    const mockDoc = {
+                        id: documentCounter++,
+                        document_number: result.documentNumber,
+                        document_type: documentType,
+                        department: documentData.department,
+                        subject: documentData.subject,
+                        recipient: documentData.recipient,
+                        content: documentData.content,
+                        created_date: new Date().toISOString(),
+                        status: 'Activo'
+                    };
+                    
+                    mockDocuments.unshift(mockDoc); // Agregar al inicio del array
+                    console.log('📚 Documento agregado al historial mock:', mockDoc);
+
                     // Mostrar vista previa
                     document.getElementById('generatedNumber').textContent = result.documentNumber;
                     const htmlContent = createDocumentHTML(currentDocument);
@@ -1074,12 +1131,9 @@
                     document.getElementById('recipient').value = '';
                     document.getElementById('content').value = '';
 
-                    // Actualizar datos (comentado para testing)
-                    // loadStats();
-                    // loadHistory();
-                    // if (currentUser.role === 'Administrador') {
-                    //     loadCounters();
-                    // }
+                    // Actualizar datos usando mock
+                    loadMockStats();
+                    loadMockHistory();
                 }
             } catch (error) {
                 console.error('❌ Error generando documento:', error);
@@ -1118,7 +1172,38 @@
             }
         }
 
+        // Funciones mock para testing
+        function loadMockStats() {
+            console.log('📊 Cargando estadísticas mock...');
+            const totalDocs = mockDocuments.length;
+            const today = new Date().toDateString();
+            const todayDocs = mockDocuments.filter(doc => 
+                new Date(doc.created_date).toDateString() === today
+            ).length;
+            const departments = new Set(mockDocuments.map(doc => doc.department)).size;
+            
+            document.getElementById('totalDocuments').textContent = totalDocs;
+            document.getElementById('todayDocuments').textContent = todayDocs;
+            document.getElementById('activeDepartments').textContent = departments || 1;
+            
+            console.log('✅ Estadísticas actualizadas:', { totalDocs, todayDocs, departments });
+        }
+
+        function loadMockHistory() {
+            console.log('📚 Cargando historial mock...');
+            allDocuments = [...mockDocuments]; // Copiar documentos mock
+            updateHistoryTable(allDocuments);
+            updateHistoryInfo(allDocuments.length);
+            console.log('✅ Historial actualizado con', allDocuments.length, 'documentos');
+        }
+
         async function loadStats() {
+            if (mockDocuments.length > 0) {
+                // Si tenemos documentos mock, usar esos
+                loadMockStats();
+                return;
+            }
+            
             try {
                 const stats = await apiCall('/stats');
                 document.getElementById('totalDocuments').textContent = stats.totalDocuments;
@@ -1126,10 +1211,20 @@
                 document.getElementById('activeDepartments').textContent = stats.activeDepartments;
             } catch (error) {
                 console.error('Error cargando estadísticas:', error);
+                // Usar valores por defecto
+                document.getElementById('totalDocuments').textContent = '0';
+                document.getElementById('todayDocuments').textContent = '0';
+                document.getElementById('activeDepartments').textContent = '0';
             }
         }
 
         async function loadHistory() {
+            if (mockDocuments.length > 0) {
+                // Si tenemos documentos mock, usar esos
+                loadMockHistory();
+                return;
+            }
+            
             try {
                 const documents = await apiCall('/documents');
                 allDocuments = documents; // Guardar todos los documentos
@@ -1140,7 +1235,7 @@
                 document.getElementById('historyTable').innerHTML = `
                     <tr>
                         <td colspan="7" style="text-align: center; color: #e74c3c;">
-                            Error cargando historial
+                            Error cargando historial - Usando modo demo
                         </td>
                     </tr>
                 `;
@@ -1616,10 +1711,12 @@ Firma y Sello
         }
 
         function refreshData() {
+            console.log('🔄 Actualizando datos...');
             loadStats();
             loadHistory();
             if (currentUser && currentUser.role === 'Administrador') {
-                loadCounters();
+                // loadCounters(); // Comentado para testing
+                console.log('👨‍💼 Contadores de admin no disponibles en modo demo');
             }
             showAlert('Datos actualizados correctamente', 'success');
         }
