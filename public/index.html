@@ -835,6 +835,8 @@
         let mockDocuments = []; // Documentos simulados para testing
         let documentCounter = 1; // Contador para documentos mock
         let mockCounters = {}; // Contadores simulados para testing - formato: {dept-tipo-año: numero}
+        let excelHistoryData = []; // Datos del historial de Excel
+        let showingExcelHistory = false; // Flag para saber si estamos mostrando historial Excel
 
         // Usuarios del sistema
         const users = {
@@ -1215,7 +1217,152 @@
             }
         }
 
-        // Función de debugging - puedes ejecutarla desde la consola del navegador
+        // Función para cargar historial de Excel
+        async function loadExcelHistory() {
+            try {
+                console.log('📊 Cargando historial desde Excel...');
+                showAlert('Cargando historial de Excel...', 'info');
+                
+                // Importar SheetJS
+                const XLSX = await import('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+                
+                // Leer el archivo Excel
+                const response = await window.fs.readFile('historial.xlsx');
+                const workbook = XLSX.read(response, {
+                    cellDates: true,
+                    cellNF: true
+                });
+                
+                // Obtener la primera hoja (SINTEL)
+                const worksheet = workbook.Sheets['SINTEL'];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                console.log('📄 Datos leídos del Excel:', jsonData.length, 'filas');
+                
+                // Encontrar la fila de headers (que empieza con "Fecha")
+                let headerRowIndex = -1;
+                for (let i = 0; i < jsonData.length; i++) {
+                    if (jsonData[i][0] === 'Fecha') {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+                
+                if (headerRowIndex === -1) {
+                    throw new Error('No se encontró la fila de encabezados');
+                }
+                
+                console.log('📋 Headers encontrados en fila:', headerRowIndex + 1);
+                const headers = jsonData[headerRowIndex];
+                console.log('📋 Headers:', headers);
+                
+                // Procesar datos desde la fila siguiente a los headers
+                excelHistoryData = [];
+                for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    
+                    // Saltar filas vacías o incompletas
+                    if (!row || !row[0] || !row[1]) continue;
+                    
+                    const document = {
+                        id: i - headerRowIndex,
+                        fecha: row[0] instanceof Date ? row[0] : new Date(row[0]),
+                        descripcion: row[1] || '',
+                        entidad: row[2] || '',
+                        contacto: row[3] || '',
+                        numero_oficio: row[4] || '',
+                        source: 'excel'
+                    };
+                    
+                    excelHistoryData.push(document);
+                }
+                
+                console.log('✅ Documentos procesados del Excel:', excelHistoryData.length);
+                
+                // Mostrar los datos del Excel en la tabla
+                showingExcelHistory = true;
+                updateHistoryTableWithExcel(excelHistoryData);
+                updateHistoryInfo(excelHistoryData.length, 'Excel');
+                
+                // Actualizar el texto del botón
+                const excelBtn = document.querySelector('.excel-btn');
+                excelBtn.textContent = '📋 Volver al Historial Normal';
+                excelBtn.onclick = () => returnToNormalHistory();
+                
+                showAlert(`Historial de Excel cargado: ${excelHistoryData.length} documentos`, 'success');
+                
+            } catch (error) {
+                console.error('❌ Error cargando historial de Excel:', error);
+                showAlert('Error cargando historial de Excel: ' + error.message, 'error');
+            }
+        }
+
+        // Función para volver al historial normal
+        function returnToNormalHistory() {
+            console.log('🔄 Volviendo al historial normal...');
+            showingExcelHistory = false;
+            
+            // Restaurar historial normal
+            loadMockHistory();
+            
+            // Restaurar el botón
+            const excelBtn = document.querySelector('.excel-btn');
+            excelBtn.textContent = '📊 Historial de Excel';
+            excelBtn.onclick = () => loadExcelHistory();
+            
+            showAlert('Volviendo al historial normal', 'info');
+        }
+
+        // Función para actualizar la tabla con datos de Excel
+        function updateHistoryTableWithExcel(documents) {
+            const tbody = document.getElementById('historyTable');
+            
+            console.log('🔄 Actualizando tabla con datos de Excel:', documents.length, 'documentos');
+            
+            if (documents.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                            <div style="font-size: 1.2em; margin-bottom: 10px;">📊</div>
+                            <div>No hay documentos en el historial de Excel</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            documents.forEach(doc => {
+                const row = tbody.insertRow();
+                const date = doc.fecha.toLocaleString('es-ES');
+                
+                // Determinar el tipo de documento basado en el número de oficio
+                let documentType = 'Documento';
+                if (doc.numero_oficio.includes('-PROF')) {
+                    documentType = 'Proforma';
+                } else if (doc.numero_oficio.includes('-AE')) {
+                    documentType = 'Acta de Entrega';
+                } else if (doc.numero_oficio.includes('-OF')) {
+                    documentType = 'Oficio';
+                } else if (doc.numero_oficio.includes('-INF')) {
+                    documentType = 'Informe';
+                } else if (doc.numero_oficio.includes('-ARSG')) {
+                    documentType = 'Acta de Reunión';
+                }
+                
+                row.innerHTML = `
+                    <td><strong>${doc.numero_oficio}</strong></td>
+                    <td>${documentType}</td>
+                    <td>${doc.entidad}</td>
+                    <td>${doc.descripcion}</td>
+                    <td>${date}</td>
+                    <td><span class="status-indicator status-active"></span>Histórico</td>
+                    <td>📊 Excel</td>
+                `;
+            });
+            
+            console.log('✅ Tabla de Excel actualizada');
+        }
         function debugDocuments() {
             console.log('=== ESTADO ACTUAL DEL SISTEMA ===');
             console.log('👤 Usuario actual:', currentUser?.username, '(' + currentUser?.role + ')');
