@@ -1370,7 +1370,78 @@
             }
         }
 
-        // Función para volver al historial normal
+        // Función de prueba para verificar que el archivo se puede leer
+        function testExcelFile() {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    console.log('🧪 Probando lectura del archivo Excel...');
+                    const response = await window.fs.readFile('historial.xlsx');
+                    console.log('✅ Archivo leído exitosamente, tamaño:', response.length, 'bytes');
+                    
+                    // Verificar que tenemos SheetJS disponible
+                    if (!window.XLSX) {
+                        console.log('📦 SheetJS no disponible, intentando cargar...');
+                        showAlert('Cargando biblioteca Excel...', 'info');
+                        
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                        document.head.appendChild(script);
+                        
+                        await new Promise((resolveScript, rejectScript) => {
+                            script.onload = () => {
+                                console.log('✅ SheetJS cargado exitosamente');
+                                resolveScript();
+                            };
+                            script.onerror = () => {
+                                console.error('❌ Error cargando SheetJS');
+                                rejectScript(new Error('No se pudo cargar la biblioteca Excel'));
+                            };
+                        });
+                    }
+                    
+                    console.log('✅ Test completado exitosamente');
+                    showAlert('Archivo Excel encontrado y biblioteca cargada ✅', 'success');
+                    resolve(true);
+                    
+                } catch (error) {
+                    console.error('❌ Error en test:', error);
+                    showAlert('Error: ' + error.message, 'error');
+                    reject(error);
+                }
+            });
+        }
+
+        // Función simple para verificar si el archivo existe
+        function checkFile() {
+            window.fs.readFile('historial.xlsx')
+                .then(data => {
+                    console.log('✅ Archivo encontrado, tamaño:', data.length, 'bytes');
+                    alert('✅ Archivo Excel encontrado correctamente');
+                })
+                .catch(error => {
+                    console.error('❌ Error:', error);
+                    alert('❌ Error: ' + error.message);
+                });
+        }
+
+        // Función para probar el botón de Excel directamente
+        function testExcelButton() {
+            console.log('🧪 Probando función loadExcelHistory...');
+            if (typeof loadExcelHistory === 'function') {
+                console.log('✅ Función loadExcelHistory encontrada');
+                loadExcelHistory();
+            } else {
+                console.error('❌ Función loadExcelHistory no encontrada');
+                alert('❌ Error: Función no encontrada');
+            }
+        }
+
+        // Exponer funciones para debugging en consola
+        window.testExcelFile = testExcelFile;
+        window.checkFile = checkFile;
+        window.testExcelButton = testExcelButton;
+        window.debugDocuments = debugDocuments;
+        window.forceDeleteAll = forceDeleteAll;
         function returnToNormalHistory() {
             console.log('🔄 Volviendo al historial normal...');
             showingExcelHistory = false;
@@ -1386,7 +1457,7 @@
             showAlert('Volviendo al historial normal', 'info');
         }
 
-        // Función para actualizar la tabla con datos de Excel
+        // Función para actualizar la tabla con datos de Excel - versión mejorada
         function updateHistoryTableWithExcel(documents) {
             const tbody = document.getElementById('historyTable');
             
@@ -1405,36 +1476,70 @@
             }
 
             tbody.innerHTML = '';
-            documents.forEach(doc => {
-                const row = tbody.insertRow();
-                const date = doc.fecha.toLocaleString('es-ES');
-                
-                // Determinar el tipo de documento basado en el número de oficio
-                let documentType = 'Documento';
-                if (doc.numero_oficio.includes('-PROF')) {
-                    documentType = 'Proforma';
-                } else if (doc.numero_oficio.includes('-AE')) {
-                    documentType = 'Acta de Entrega';
-                } else if (doc.numero_oficio.includes('-OF')) {
-                    documentType = 'Oficio';
-                } else if (doc.numero_oficio.includes('-INF')) {
-                    documentType = 'Informe';
-                } else if (doc.numero_oficio.includes('-ARSG')) {
-                    documentType = 'Acta de Reunión';
+            
+            documents.forEach((doc, index) => {
+                try {
+                    const row = tbody.insertRow();
+                    
+                    // Formatear fecha de manera segura
+                    let dateString = 'Fecha no válida';
+                    try {
+                        if (doc.fecha && doc.fecha instanceof Date && !isNaN(doc.fecha)) {
+                            dateString = doc.fecha.toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit'
+                            });
+                        }
+                    } catch (dateError) {
+                        console.warn('Error formateando fecha para documento', index, ':', dateError);
+                    }
+                    
+                    // Determinar el tipo de documento basado en el número de oficio
+                    let documentType = 'Documento';
+                    const numeroOficio = doc.numero_oficio || '';
+                    
+                    if (numeroOficio.includes('-PROF')) {
+                        documentType = 'Proforma';
+                    } else if (numeroOficio.includes('-AE')) {
+                        documentType = 'Acta de Entrega';
+                    } else if (numeroOficio.includes('-OF')) {
+                        documentType = 'Oficio';
+                    } else if (numeroOficio.includes('-INF')) {
+                        documentType = 'Informe';
+                    } else if (numeroOficio.includes('-ARSG')) {
+                        documentType = 'Acta de Reunión';
+                    }
+                    
+                    // Truncar descripción si es muy larga
+                    let descripcionCorta = doc.descripcion || 'Sin descripción';
+                    if (descripcionCorta.length > 50) {
+                        descripcionCorta = descripcionCorta.substring(0, 47) + '...';
+                    }
+                    
+                    row.innerHTML = `
+                        <td><strong>${numeroOficio || 'Sin número'}</strong></td>
+                        <td>${documentType}</td>
+                        <td>${doc.entidad || 'Sin entidad'}</td>
+                        <td title="${doc.descripcion || ''}">${descripcionCorta}</td>
+                        <td>${dateString}</td>
+                        <td><span class="status-indicator status-active"></span>Histórico</td>
+                        <td>📊 Excel</td>
+                    `;
+                    
+                } catch (rowError) {
+                    console.error('Error procesando documento', index, ':', rowError);
+                    // Crear una fila de error en lugar de fallar completamente
+                    const errorRow = tbody.insertRow();
+                    errorRow.innerHTML = `
+                        <td colspan="7" style="color: #e74c3c; text-align: center;">
+                            Error procesando documento ${index + 1}
+                        </td>
+                    `;
                 }
-                
-                row.innerHTML = `
-                    <td><strong>${doc.numero_oficio}</strong></td>
-                    <td>${documentType}</td>
-                    <td>${doc.entidad}</td>
-                    <td>${doc.descripcion}</td>
-                    <td>${date}</td>
-                    <td><span class="status-indicator status-active"></span>Histórico</td>
-                    <td>📊 Excel</td>
-                `;
             });
             
-            console.log('✅ Tabla de Excel actualizada');
+            console.log('✅ Tabla de Excel actualizada con', documents.length, 'documentos');
         }
         function debugDocuments() {
             console.log('=== ESTADO ACTUAL DEL SISTEMA ===');
