@@ -1,7 +1,7 @@
 {
-  "name": "sintel-document-manager",
+  "name": "sintel-sistema-documental",
   "version": "1.0.0",
-  "description": "Sistema de Gestión Documental SINTEL para múltiples usuarios",
+  "description": "Sistema de Gestión Documental SINTEL con Supabase",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -16,14 +16,15 @@
     "nodemon": "^3.0.1"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=16.0.0"
   },
   "keywords": [
-    "document-management",
     "sintel",
-    "oficios",
-    "memorandos"
+    "documentos",
+    "gestion",
+    "supabase",
+    "postgresql"
   ],
-  "author": "SINTEL",
+  "author": "SIGMA CONSULTING GROUP SAS",
   "license": "MIT"
 }
