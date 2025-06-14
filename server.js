@@ -1,4 +1,3 @@
-// server.js - Servidor principal para Render con Panel de Administración
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
@@ -7,403 +6,324 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware
+// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Configuración de PostgreSQL
+// Configuración de la base de datos Supabase
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
-// Inicializar base de datos
-async function initializeDatabase() {
-    try {
-        // Tabla para contadores
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS sintel_counters (
-                id SERIAL PRIMARY KEY,
-                department VARCHAR(10) NOT NULL,
-                document_type VARCHAR(20) NOT NULL,
-                counter INTEGER DEFAULT 0,
-                year INTEGER NOT NULL,
-                UNIQUE(department, document_type, year)
-            )
-        `);
-
-        // Tabla para documentos
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS sintel_documents (
-                id SERIAL PRIMARY KEY,
-                document_number VARCHAR(100) UNIQUE NOT NULL,
-                document_type VARCHAR(20) NOT NULL,
-                department VARCHAR(10) NOT NULL,
-                subject TEXT NOT NULL,
-                recipient VARCHAR(255),
-                content TEXT,
-                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                status VARCHAR(20) DEFAULT 'Activo'
-            )
-        `);
-
-        console.log('Base de datos inicializada correctamente');
-    } catch (err) {
-        console.error('Error inicializando base de datos:', err);
-    }
-}
-
-// Función auxiliar para asegurar que existe el contador
-async function ensureCounter(department, type, year) {
-    try {
-        // Intentar insertar el contador si no existe
-        await pool.query(
-            `INSERT INTO sintel_counters (department, document_type, counter, year) 
-             VALUES ($1, $2, 0, $3) 
-             ON CONFLICT (department, document_type, year) 
-             DO NOTHING`,
-            [department, type, year]
-        );
-    } catch (err) {
-        console.error('Error asegurando contador:', err);
-    }
-}
-
-// ================================
-// RUTAS PRINCIPALES
-// ================================
-
-// Obtener próximo número de documento
-app.get('/api/next-number/:type/:department', async (req, res) => {
-    try {
-        const { type, department } = req.params;
-        const currentYear = new Date().getFullYear();
-
-        // Asegurar que existe el contador
-        await ensureCounter(department, type, currentYear);
-
-        // Obtener contador actual
-        const counterResult = await pool.query(
-            'SELECT counter FROM sintel_counters WHERE department = $1 AND document_type = $2 AND year = $3',
-            [department, type, currentYear]
-        );
-
-        if (counterResult.rows.length === 0) {
-            throw new Error('No se pudo obtener el contador');
-        }
-
-        const nextNumber = counterResult.rows[0].counter + 1;
-        const paddedNumber = String(nextNumber).padStart(3, '0');
-        const documentTypes = {
-    'oficio': 'Oficio No.',
-    'memorando': 'Memorando No.',
-    'orden_compra': 'Orden de Compra No.',
-    'proforma': 'Proforma No.',
-    'acta_entrega': 'Acta de Entrega No.',
-    'acta_recepcion': 'Acta de Recepción No.'
-};
-const prefix = documentTypes[type] || 'Documento No.';
-        const documentNumber = `${prefix}SINTEL-${department}-${paddedNumber}-${currentYear}`;
-
-        res.json({ documentNumber, nextNumber });
-    } catch (err) {
-        console.error('Error obteniendo próximo número:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME || 'postgres',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD,
+    ssl: {
+        rejectUnauthorized: false
     }
 });
 
-// Generar documento
-app.post('/api/generate-document', async (req, res) => {
+// Verificar conexión a la base de datos
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('❌ Error conectando a Supabase:', err);
+    } else {
+        console.log('✅ Conectado exitosamente a Supabase');
+        release();
+    }
+});
+
+// ================================
+// RUTAS DEL API
+// ================================
+
+// Ruta principal - servir el HTML
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Generar nuevo documento
+app.post('/api/documents', async (req, res) => {
+    const client = await pool.connect();
     try {
-        const { type, department, subject, recipient, content } = req.body;
-        const currentYear = new Date().getFullYear();
-
-        // Validar datos requeridos
-        if (!type || !department || !subject) {
-            return res.status(400).json({ 
-                error: 'Faltan datos requeridos: type, department, subject' 
-            });
-        }
-
-        // Asegurar que existe el contador
-        await ensureCounter(department, type, currentYear);
-
-        // Incrementar contador en una transacción
-        const client = await pool.connect();
+        await client.query('BEGIN');
         
-        try {
-            await client.query('BEGIN');
-
-            // Incrementar contador
-            await client.query(
-                `UPDATE sintel_counters 
-                 SET counter = counter + 1 
-                 WHERE department = $1 AND document_type = $2 AND year = $3`,
-                [department, type, currentYear]
-            );
-
-            // Obtener nuevo número
-            const counterResult = await client.query(
-                'SELECT counter FROM sintel_counters WHERE department = $1 AND document_type = $2 AND year = $3',
-                [department, type, currentYear]
-            );
-
-            if (counterResult.rows.length === 0) {
-                throw new Error('Error obteniendo contador después de incrementar');
-            }
-
-            const currentNumber = counterResult.rows[0].counter;
-            const paddedNumber = String(currentNumber).padStart(3, '0');
-            const documentTypes = {
-    'oficio': 'Oficio No.',
-    'memorando': 'Memorando No.',
-    'orden_compra': 'Orden de Compra No.',
-    'proforma': 'Proforma No.',
-    'acta_entrega': 'Acta de Entrega No.',
-    'acta_recepcion': 'Acta de Recepción No.'
-};
-const prefix = documentTypes[type] || 'Documento No.';
-            const documentNumber = `${prefix}SINTEL-${department}-${paddedNumber}-${currentYear}`;
-
-            // Guardar documento
-            await client.query(
-                `INSERT INTO sintel_documents 
-                 (document_number, document_type, department, subject, recipient, content) 
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
-                [documentNumber, type, department, subject, recipient || '', content || '']
-            );
-
-            await client.query('COMMIT');
-
-            res.json({
-                success: true,
-                documentNumber,
-                message: 'Documento generado exitosamente'
-            });
-
-        } catch (err) {
-            await client.query('ROLLBACK');
-            throw err;
-        } finally {
-            client.release();
-        }
-
-    } catch (err) {
-        console.error('Error generando documento:', err);
-        res.status(500).json({ 
-            error: 'Error generando documento',
-            details: err.message 
+        const { type, department, subject, recipient, content, created_by, created_by_role } = req.body;
+        
+        // Obtener el próximo número de documento usando la función de la base de datos
+        const numberResult = await client.query(
+            'SELECT get_next_document_number($1, $2) as document_number',
+            [department, type]
+        );
+        
+        const documentNumber = numberResult.rows[0].document_number;
+        
+        // Insertar el documento
+        const insertResult = await client.query(
+            `INSERT INTO documents (document_number, document_type, department, subject, recipient, content, created_by, created_by_role)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+            [documentNumber, type, department, subject, recipient || '', content || '', created_by, created_by_role]
+        );
+        
+        await client.query('COMMIT');
+        
+        res.json({
+            success: true,
+            documentNumber: documentNumber,
+            id: insertResult.rows[0].id,
+            message: 'Documento generado exitosamente'
         });
+        
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ Error generando documento:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error generando documento: ' + error.message
+        });
+    } finally {
+        client.release();
     }
 });
 
-// Obtener historial de documentos
+// Obtener todos los documentos (historial)
 app.get('/api/documents', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT id, document_number, document_type, department, subject, 
-                    recipient, created_date, status 
-             FROM sintel_documents 
-             ORDER BY created_date DESC 
-             LIMIT 50`
+            'SELECT * FROM documents ORDER BY created_date DESC'
         );
+        
         res.json(result.rows);
-    } catch (err) {
-        console.error('Error obteniendo documentos:', err);
-        res.status(500).json({ error: 'Error obteniendo documentos' });
+    } catch (error) {
+        console.error('❌ Error obteniendo documentos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error obteniendo documentos: ' + error.message
+        });
     }
 });
 
 // Obtener estadísticas
 app.get('/api/stats', async (req, res) => {
     try {
-        const totalDocsResult = await pool.query('SELECT COUNT(*) as total FROM sintel_documents');
+        // Total de documentos
+        const totalResult = await pool.query('SELECT COUNT(*) as total FROM documents');
         
-        const todayDocsResult = await pool.query(
-            `SELECT COUNT(*) as today 
-             FROM sintel_documents 
+        // Documentos de hoy
+        const todayResult = await pool.query(
+            `SELECT COUNT(*) as today FROM documents 
              WHERE DATE(created_date) = CURRENT_DATE`
         );
-
-        const activeDeptResult = await pool.query(
-            `SELECT COUNT(DISTINCT department) as active 
-             FROM sintel_documents 
-             WHERE created_date >= CURRENT_DATE - INTERVAL '30 days'`
+        
+        // Departamentos activos
+        const deptsResult = await pool.query(
+            'SELECT COUNT(DISTINCT department) as departments FROM documents'
         );
-
+        
         res.json({
-            totalDocuments: parseInt(totalDocsResult.rows[0].total),
-            todayDocuments: parseInt(todayDocsResult.rows[0].today),
-            activeDepartments: parseInt(activeDeptResult.rows[0].active)
+            totalDocuments: parseInt(totalResult.rows[0].total),
+            todayDocuments: parseInt(todayResult.rows[0].today),
+            activeDepartments: parseInt(deptsResult.rows[0].departments)
         });
-    } catch (err) {
-        console.error('Error obteniendo estadísticas:', err);
-        res.status(500).json({ error: 'Error obteniendo estadísticas' });
-    }
-});
-
-// ================================
-// RUTAS DE ADMINISTRACIÓN
-// ================================
-
-// ELIMINAR DOCUMENTO ESPECÍFICO
-app.delete('/api/delete-document/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        // Obtener documento antes de eliminar
-        const docResult = await pool.query(
-            'SELECT * FROM sintel_documents WHERE id = $1',
-            [id]
-        );
-
-        if (docResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Documento no encontrado' });
-        }
-
-        const document = docResult.rows[0];
-
-        // Eliminar documento
-        await pool.query('DELETE FROM sintel_documents WHERE id = $1', [id]);
-
-        // Decrementar contador correspondiente
-        const currentYear = new Date(document.created_date).getFullYear();
-        await pool.query(
-            `UPDATE sintel_counters 
-             SET counter = GREATEST(counter - 1, 0)
-             WHERE department = $1 AND document_type = $2 AND year = $3`,
-            [document.department, document.document_type, currentYear]
-        );
-
-        res.json({
-            success: true,
-            message: `Documento ${document.document_number} eliminado correctamente`
+    } catch (error) {
+        console.error('❌ Error obteniendo estadísticas:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error obteniendo estadísticas: ' + error.message
         });
-    } catch (err) {
-        console.error('Error eliminando documento:', err);
-        res.status(500).json({ error: 'Error eliminando documento' });
     }
 });
 
-// ELIMINAR TODOS LOS DOCUMENTOS
-app.delete('/api/delete-all-documents', async (req, res) => {
+// Obtener próximo número de documento (preview)
+app.get('/api/preview-number', async (req, res) => {
     try {
-        const client = await pool.connect();
+        const { type, department } = req.query;
         
-        try {
-            await client.query('BEGIN');
-            
-            // Contar documentos antes de eliminar
-            const countResult = await client.query('SELECT COUNT(*) as total FROM sintel_documents');
-            const totalDeleted = parseInt(countResult.rows[0].total);
-            
-            // Eliminar todos los documentos
-            await client.query('DELETE FROM sintel_documents');
-            
-            // Resetear todos los contadores a 0
-            await client.query('UPDATE sintel_counters SET counter = 0');
-            
-            await client.query('COMMIT');
-            
-            res.json({
-                success: true,
-                message: `${totalDeleted} documentos eliminados y contadores reiniciados`
-            });
-        } catch (err) {
-            await client.query('ROLLBACK');
-            throw err;
-        } finally {
-            client.release();
-        }
-    } catch (err) {
-        console.error('Error eliminando todos los documentos:', err);
-        res.status(500).json({ error: 'Error eliminando documentos' });
-    }
-});
-
-// REINICIAR CONTADOR ESPECÍFICO
-app.post('/api/reset-counter', async (req, res) => {
-    try {
-        const { department, document_type, year } = req.body;
-        
-        if (!department || !document_type || !year) {
-            return res.status(400).json({ 
-                error: 'Faltan parámetros: department, document_type, year' 
+        if (!type || !department) {
+            return res.status(400).json({
+                success: false,
+                message: 'Tipo y departamento son requeridos'
             });
         }
-
-        // Resetear contador específico
+        
+        // Obtener el contador actual sin incrementar
+        const year = new Date().getFullYear();
         const result = await pool.query(
-            `UPDATE sintel_counters 
-             SET counter = 0 
-             WHERE department = $1 AND document_type = $2 AND year = $3`,
-            [department, document_type, year]
+            'SELECT counter FROM counters WHERE department = $1 AND document_type = $2 AND year = $3',
+            [department, type, year]
         );
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: 'Contador no encontrado' });
-        }
-
-        res.json({
-            success: true,
-            message: `Contador ${document_type} para ${department} ${year} reiniciado`
-        });
-    } catch (err) {
-        console.error('Error reiniciando contador:', err);
-        res.status(500).json({ error: 'Error reiniciando contador' });
-    }
-});
-
-// REINICIAR TODOS LOS CONTADORES
-app.post('/api/reset-all-counters', async (req, res) => {
-    try {
-        await pool.query('UPDATE sintel_counters SET counter = 0');
+        
+        const currentCounter = result.rows.length > 0 ? result.rows[0].counter : 0;
+        const nextNumber = currentCounter + 1;
+        
+        // Construir el número de documento
+        const prefixes = {
+            'oficio': 'Oficio No.',
+            'memorando': 'Memorando No.',
+            'orden_compra': 'Orden de Compra No.',
+            'proforma': 'Proforma No.',
+            'acta_entrega_externa': 'Acta de Entrega-Recepción Externa No.',
+            'acta_entrega_interna': 'Acta de Entrega-Recepción Interna No.',
+            'acta_reunion': 'Acta de Reunión No.'
+        };
+        
+        const prefix = prefixes[type] || 'Documento No.';
+        const documentNumber = `${prefix} ${department}-${String(nextNumber).padStart(3, '0')}-${year}`;
         
         res.json({
             success: true,
-            message: 'Todos los contadores han sido reiniciados a 0'
+            nextNumber: documentNumber
         });
-    } catch (err) {
-        console.error('Error reiniciando contadores:', err);
-        res.status(500).json({ error: 'Error reiniciando contadores' });
+    } catch (error) {
+        console.error('❌ Error obteniendo próximo número:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error obteniendo próximo número: ' + error.message
+        });
     }
 });
 
-// OBTENER INFORMACIÓN DE CONTADORES
+// Obtener contadores (solo para administradores)
 app.get('/api/counters', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT department, document_type, counter, year 
-             FROM sintel_counters 
-             ORDER BY year DESC, department, document_type`
+            'SELECT * FROM counters ORDER BY department, document_type'
         );
         
         res.json(result.rows);
-    } catch (err) {
-        console.error('Error obteniendo contadores:', err);
-        res.status(500).json({ error: 'Error obteniendo contadores' });
+    } catch (error) {
+        console.error('❌ Error obteniendo contadores:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error obteniendo contadores: ' + error.message
+        });
     }
 });
 
-// ================================
-// RUTAS ESTÁTICAS
-// ================================
-
-// Servir página principal
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Eliminar documento (solo administradores)
+app.delete('/api/documents/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await pool.query(
+            'DELETE FROM documents WHERE id = $1 RETURNING document_number',
+            [id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Documento no encontrado'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: `Documento ${result.rows[0].document_number} eliminado correctamente`
+        });
+    } catch (error) {
+        console.error('❌ Error eliminando documento:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error eliminando documento: ' + error.message
+        });
+    }
 });
 
-// ================================
-// INICIALIZAR SERVIDOR
-// ================================
+// Eliminar todos los documentos
+app.delete('/api/documents', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // Contar documentos antes de eliminar
+        const countResult = await client.query('SELECT COUNT(*) as total FROM documents');
+        const totalDeleted = parseInt(countResult.rows[0].total);
+        
+        // Eliminar todos los documentos
+        await client.query('DELETE FROM documents');
+        
+        // Reiniciar todos los contadores
+        await client.query('UPDATE counters SET counter = 0');
+        
+        await client.query('COMMIT');
+        
+        res.json({
+            success: true,
+            message: `✅ Se eliminaron ${totalDeleted} documentos y se reiniciaron todos los contadores`
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ Error eliminando documentos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error eliminando documentos: ' + error.message
+        });
+    } finally {
+        client.release();
+    }
+});
 
-async function startServer() {
-    await initializeDatabase();
-    app.listen(port, () => {
-        console.log(`Servidor SINTEL ejecutándose en puerto ${port}`);
+// Reiniciar contadores
+app.post('/api/reset-counters', async (req, res) => {
+    try {
+        const { department, type } = req.body;
+        
+        if (!department && !type) {
+            // Reiniciar todos los contadores
+            await pool.query('UPDATE counters SET counter = 0');
+            res.json({
+                success: true,
+                message: 'Todos los contadores han sido reiniciados a 0'
+            });
+        } else if (department && type) {
+            // Reiniciar contador específico
+            const year = new Date().getFullYear();
+            await pool.query(
+                'UPDATE counters SET counter = 0 WHERE department = $1 AND document_type = $2 AND year = $3',
+                [department, type, year]
+            );
+            res.json({
+                success: true,
+                message: `Contador para ${department} - ${type} reiniciado`
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: 'Para reiniciar un contador específico, proporcione tanto departamento como tipo'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error reiniciando contadores:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error reiniciando contadores: ' + error.message
+        });
+    }
+});
+
+// Ruta de salud para verificar que el servidor funciona
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        message: 'Servidor SINTEL funcionando correctamente',
+        database: 'Supabase conectado'
     });
-}
+});
 
-startServer();
+// Iniciar servidor
+app.listen(port, () => {
+    console.log(`🚀 Servidor SINTEL iniciado en puerto ${port}`);
+    console.log(`🌐 URL: http://localhost:${port}`);
+    console.log(`📊 Base de datos: Supabase PostgreSQL`);
+});
+
+// Manejo de errores no capturados
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception thrown:', error);
+    process.exit(1);
+});
