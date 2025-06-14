@@ -16,7 +16,13 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
         rejectUnauthorized: false
-    }
+    },
+    // Forzar IPv4 para evitar problemas de conectividad
+    family: 4,
+    // Configuraciones adicionales para mejorar la conexión
+    connectionTimeoutMillis: 30000,
+    idleTimeoutMillis: 30000,
+    max: 20
 });
 
 // Verificar conexión a la base de datos
