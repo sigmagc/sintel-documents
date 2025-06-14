@@ -11,13 +11,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Configuración de la base de datos Supabase
+// Configuración de la base de datos Supabase usando DATABASE_URL
 const pool = new Pool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'postgres',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD,
+    connectionString: process.env.DATABASE_URL,
     ssl: {
         rejectUnauthorized: false
     }
